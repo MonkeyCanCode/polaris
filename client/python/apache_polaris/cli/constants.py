@@ -256,8 +256,8 @@ class Hints:
     )
     REMOVE_PROPERTY = (
         "A key to remove from a properties map. If the key already does not exist then"
-        " no action is taken for the specified key. Multiple can be provided by specifying "
-        "this option more than once"
+        " no action is taken for the specified key. Multiple can be provided by specifying"
+        " this option more than once"
     )
 
     # Storage Hints
