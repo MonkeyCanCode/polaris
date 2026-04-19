@@ -48,6 +48,8 @@ class Argument:
     lower: bool = False
     allow_repeats: bool = False
     default: object = None
+    metavar: Optional[str] = None
+    group: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.name.startswith("--"):
@@ -73,6 +75,7 @@ class Option:
     name: str
     hint: Optional[str] = None
     input_name: Optional[str] = None
+    input_metavar: Optional[str] = None
     args: List[Argument] = field(default_factory=list)
     children: List["Option"] = field(default_factory=list)
 
@@ -84,109 +87,143 @@ class OptionTree:
     """
 
     _CATALOG_ROLE_AND_CATALOG = [
-        Argument(Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME),
-        Argument(Arguments.CATALOG_ROLE, str, Hints.CatalogRoles.CATALOG_ROLE),
+        Argument(Arguments.CATALOG, str, "The name of a catalog"),
+        Argument(Arguments.CATALOG_ROLE, str, "The name of a catalog role"),
     ]
 
     _FEDERATION_ARGS = [
         Argument(
             Arguments.CATALOG_CONNECTION_TYPE,
             str,
-            Hints.Catalogs.External.CATALOG_CONNECTION_TYPE,
+            "External catalog type [ICEBERG-REST, HADOOP, HIVE]",
             lower=True,
             choices=[ct.value for ct in CatalogConnectionType],
+            group="External Catalog Federation: General Options",
         ),
         Argument(
             Arguments.ICEBERG_REMOTE_CATALOG_NAME,
             str,
-            Hints.Catalogs.External.ICEBERG_REMOTE_CATALOG_NAME,
+            Hints.ICEBERG_REMOTE_CATALOG_NAME,
+            group="External Catalog Federation: General Options",
         ),
         Argument(
-            Arguments.HADOOP_WAREHOUSE, str, Hints.Catalogs.External.HADOOP_WAREHOUSE
+            Arguments.HADOOP_WAREHOUSE,
+            str,
+            Hints.HADOOP_WAREHOUSE,
+            group="External Catalog Federation: General Options",
         ),
-        Argument(Arguments.HIVE_WAREHOUSE, str, Hints.Catalogs.External.HIVE_WAREHOUSE),
+        Argument(
+            Arguments.HIVE_WAREHOUSE,
+            str,
+            Hints.HIVE_WAREHOUSE,
+            group="External Catalog Federation: General Options",
+        ),
         Argument(
             Arguments.CATALOG_AUTHENTICATION_TYPE,
             str,
-            Hints.Catalogs.External.CATALOG_AUTHENTICATION_TYPE,
+            "Authentication type [OAUTH, BEARER, SIGV4, IMPLICIT]",
             lower=True,
             choices=[at.value for at in AuthenticationType],
+            group="External Catalog Federation: General Options",
         ),
         Argument(
             Arguments.CATALOG_SERVICE_IDENTITY_TYPE,
             str,
-            Hints.Catalogs.External.CATALOG_SERVICE_IDENTITY_TYPE,
+            "Service identity type [AWS_IAM]",
             lower=True,
             choices=[st.value for st in ServiceIdentityType],
+            group="External Catalog Federation: General Options",
         ),
         Argument(
             Arguments.CATALOG_SERVICE_IDENTITY_IAM_ARN,
             str,
-            Hints.Catalogs.External.CATALOG_SERVICE_IDENTITY_IAM_ARN,
-        ),
-        Argument(Arguments.CATALOG_URI, str, Hints.Catalogs.External.CATALOG_URI),
-        Argument(
-            Arguments.CATALOG_TOKEN_URI, str, Hints.Catalogs.External.CATALOG_TOKEN_URI
+            Hints.AWS_IAM_ARN,
+            group="External Catalog Federation: AWS IAM Identity Options",
         ),
         Argument(
-            Arguments.CATALOG_CLIENT_ID, str, Hints.Catalogs.External.CATALOG_CLIENT_ID
+            Arguments.CATALOG_URI,
+            str,
+            Hints.EXTERNAL_CATALOG_URI,
+            group="External Catalog Federation: General Options",
+        ),
+        Argument(
+            Arguments.CATALOG_TOKEN_URI,
+            str,
+            Hints.OAUTH_TOKEN_URI,
+            group="External Catalog Federation: OAuth Options",
+        ),
+        Argument(
+            Arguments.CATALOG_CLIENT_ID,
+            str,
+            Hints.OAUTH_CLIENT_ID,
+            group="External Catalog Federation: OAuth Options",
         ),
         Argument(
             Arguments.CATALOG_CLIENT_SECRET,
             str,
-            Hints.Catalogs.External.CATALOG_CLIENT_SECRET,
+            Hints.OAUTH_CLIENT_SECRET,
+            group="External Catalog Federation: OAuth Options",
         ),
         Argument(
             Arguments.CATALOG_CLIENT_SCOPE,
             str,
-            Hints.Catalogs.External.CATALOG_CLIENT_SCOPE,
+            Hints.OAUTH_CLIENT_SCOPE,
             allow_repeats=True,
+            group="External Catalog Federation: OAuth Options",
         ),
         Argument(
             Arguments.CATALOG_BEARER_TOKEN,
             str,
-            Hints.Catalogs.External.CATALOG_BEARER_TOKEN,
+            Hints.BEARER_TOKEN,
+            group="External Catalog Federation: Bearer Token Options",
         ),
         Argument(
-            Arguments.CATALOG_ROLE_ARN, str, Hints.Catalogs.External.CATALOG_ROLE_ARN
+            Arguments.CATALOG_ROLE_ARN,
+            str,
+            Hints.SIGV4_ROLE_ARN,
+            group="External Catalog Federation: AWS SigV4 Options",
         ),
         Argument(
             Arguments.CATALOG_ROLE_SESSION_NAME,
             str,
-            Hints.Catalogs.External.CATALOG_ROLE_SESSION_NAME,
+            Hints.SIGV4_ROLE_SESSION_NAME,
+            group="External Catalog Federation: AWS SigV4 Options",
         ),
         Argument(
             Arguments.CATALOG_EXTERNAL_ID,
             str,
-            Hints.Catalogs.External.CATALOG_EXTERNAL_ID,
+            Hints.SIGV4_EXTERNAL_ID,
+            group="External Catalog Federation: AWS SigV4 Options",
         ),
         Argument(
             Arguments.CATALOG_SIGNING_REGION,
             str,
-            Hints.Catalogs.External.CATALOG_SIGNING_REGION,
+            Hints.SIGV4_SIGNING_REGION,
+            group="External Catalog Federation: AWS SigV4 Options",
         ),
         Argument(
             Arguments.CATALOG_SIGNING_NAME,
             str,
-            Hints.Catalogs.External.CATALOG_SIGNING_NAME,
+            Hints.SIGV4_SIGNING_NAME,
             lower=True,
+            group="External Catalog Federation: AWS SigV4 Options",
         ),
     ]
 
     @staticmethod
-    def get_tree() -> List[Option]:
-        return [
-            Option(
+    def _catalogs_option() -> Option:
+        return Option(
                 Commands.CATALOGS,
-                "manage catalogs",
+                hint="manage catalogs",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new catalog",
                         args=[
                             Argument(
                                 Arguments.TYPE,
                                 str,
-                                Hints.Catalogs.Create.TYPE,
+                                "The type of catalog [INTERNAL, EXTERNAL]",
                                 lower=True,
                                 choices=[ct.value for ct in CatalogType],
                                 default=CatalogType.INTERNAL.value,
@@ -194,95 +231,117 @@ class OptionTree:
                             Argument(
                                 Arguments.STORAGE_TYPE,
                                 str,
-                                Hints.Catalogs.Create.STORAGE_TYPE,
+                                "(Required) The storage type [S3, AZURE, GCS, FILE]",
                                 lower=True,
                                 choices=[st.value for st in StorageType],
                             ),
                             Argument(
                                 Arguments.DEFAULT_BASE_LOCATION,
                                 str,
-                                Hints.Catalogs.Create.DEFAULT_BASE_LOCATION,
+                                "(Required) Default base location for the catalog",
                             ),
                             Argument(
-                                Arguments.ENDPOINT, str, Hints.Catalogs.Create.ENDPOINT
+                                Arguments.ENDPOINT,
+                                str,
+                                Hints.S3_ENDPOINT,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.ENDPOINT_INTERNAL,
                                 str,
-                                Hints.Catalogs.Create.ENDPOINT_INTERNAL,
+                                Hints.S3_ENDPOINT_INTERNAL,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.STS_ENDPOINT,
                                 str,
-                                Hints.Catalogs.Create.STS_ENDPOINT,
+                                Hints.S3_STS_ENDPOINT,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.STS_UNAVAILABLE,
                                 bool,
-                                Hints.Catalogs.Create.STS_UNAVAILABLE,
+                                Hints.S3_STS_UNAVAILABLE,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.KMS_UNAVAILABLE,
                                 bool,
-                                Hints.Catalogs.Create.KMS_UNAVAILABLE,
+                                Hints.S3_KMS_UNAVAILABLE,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.PATH_STYLE_ACCESS,
                                 bool,
-                                Hints.Catalogs.Create.PATH_STYLE_ACCESS,
+                                Hints.S3_PATH_STYLE_ACCESS,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.KMS_KEY_CURRENT,
                                 str,
-                                Hints.Catalogs.Create.KMS_KEY_CURRENT,
+                                Hints.S3_KMS_KEY_CURRENT,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.KMS_KEY_ALLOWED,
                                 str,
-                                Hints.Catalogs.Create.KMS_KEY_ALLOWED,
+                                Hints.S3_KMS_KEY_ALLOWED,
                                 allow_repeats=True,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.ALLOWED_LOCATION,
                                 str,
-                                Hints.Catalogs.Create.ALLOWED_LOCATION,
+                                "An allowed location for files tracked by the catalog",
                                 allow_repeats=True,
                             ),
                             Argument(
-                                Arguments.ROLE_ARN, str, Hints.Catalogs.Create.ROLE_ARN
+                                Arguments.ROLE_ARN,
+                                str,
+                                Hints.S3_ROLE_ARN,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
-                                Arguments.REGION, str, Hints.Catalogs.Create.REGION
+                                Arguments.REGION,
+                                str,
+                                Hints.S3_REGION,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.EXTERNAL_ID,
                                 str,
-                                Hints.Catalogs.Create.EXTERNAL_ID,
+                                Hints.S3_EXTERNAL_ID,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.TENANT_ID,
                                 str,
-                                Hints.Catalogs.Create.TENANT_ID,
+                                Hints.AZURE_TENANT_ID,
+                                group="Azure Storage Options",
                             ),
                             Argument(
                                 Arguments.MULTI_TENANT_APP_NAME,
                                 str,
-                                Hints.Catalogs.Create.MULTI_TENANT_APP_NAME,
+                                Hints.AZURE_MULTI_TENANT_APP_NAME,
+                                group="Azure Storage Options",
                             ),
                             Argument(
                                 Arguments.HIERARCHICAL,
                                 bool,
-                                Hints.Catalogs.Create.HIERARCHICAL,
+                                Hints.AZURE_HIERARCHICAL,
+                                group="Azure Storage Options",
                             ),
                             Argument(
                                 Arguments.CONSENT_URL,
                                 str,
-                                Hints.Catalogs.Create.CONSENT_URL,
+                                Hints.AZURE_CONSENT_URL,
+                                group="Azure Storage Options",
                             ),
                             Argument(
                                 Arguments.SERVICE_ACCOUNT,
                                 str,
-                                Hints.Catalogs.Create.SERVICE_ACCOUNT,
+                                Hints.GCS_SERVICE_ACCOUNT,
+                                group="GCP Storage Options",
                             ),
                             Argument(
                                 Arguments.PROPERTY,
@@ -293,35 +352,51 @@ class OptionTree:
                         ]
                         + OptionTree._FEDERATION_ARGS,
                         input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
                     ),
-                    Option(Subcommands.DELETE, input_name=Arguments.CATALOG),
-                    Option(Subcommands.GET, input_name=Arguments.CATALOG),
+                    Option(
+                        Subcommands.DELETE,
+                        hint="Delete a catalog",
+                        input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
+                    ),
+                    Option(
+                        Subcommands.GET,
+                        hint="Retrieve metadata for a catalog",
+                        input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
+                    ),
                     Option(
                         Subcommands.LIST,
+                        hint="List catalogs",
                         args=[
                             Argument(
                                 Arguments.PRINCIPAL_ROLE,
                                 str,
-                                Hints.PrincipalRoles.PRINCIPAL_ROLE,
+                                "List only catalogs reachable by this principal role",
                             )
                         ],
                     ),
                     Option(
                         Subcommands.UPDATE,
+                        hint="Update properties of a catalog",
                         args=[
                             Argument(
                                 Arguments.DEFAULT_BASE_LOCATION,
                                 str,
-                                Hints.Catalogs.Update.DEFAULT_BASE_LOCATION,
+                                "A new default base location for the catalog",
                             ),
                             Argument(
                                 Arguments.ALLOWED_LOCATION,
                                 str,
-                                Hints.Catalogs.Create.ALLOWED_LOCATION,
+                                "An additional allowed location for files",
                                 allow_repeats=True,
                             ),
                             Argument(
-                                Arguments.REGION, str, Hints.Catalogs.Create.REGION
+                                Arguments.REGION,
+                                str,
+                                Hints.S3_REGION,
+                                group="AWS S3 Storage Options",
                             ),
                             Argument(
                                 Arguments.SET_PROPERTY,
@@ -337,24 +412,31 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
+                        hint="Display a summary for a catalog",
                         input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _principals_option() -> Option:
+        return Option(
                 Commands.PRINCIPALS,
-                "manage principals",
+                hint="manage principals",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new principal",
                         args=[
                             Argument(
                                 Arguments.TYPE,
                                 str,
-                                Hints.Principals.Create.TYPE,
+                                "The type of principal [SERVICE]",
                                 lower=True,
                                 choices=[pt.value for pt in PrincipalType],
                                 default=PrincipalType.SERVICE.value,
@@ -367,15 +449,30 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
                     ),
-                    Option(Subcommands.DELETE, input_name=Arguments.PRINCIPAL),
-                    Option(Subcommands.GET, input_name=Arguments.PRINCIPAL),
-                    Option(Subcommands.LIST),
                     Option(
-                        Subcommands.ROTATE_CREDENTIALS, input_name=Arguments.PRINCIPAL
+                        Subcommands.DELETE,
+                        hint="Delete a principal",
+                        input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
+                    ),
+                    Option(
+                        Subcommands.GET,
+                        hint="Retrieve metadata for a principal",
+                        input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
+                    ),
+                    Option(Subcommands.LIST, hint="List principals"),
+                    Option(
+                        Subcommands.ROTATE_CREDENTIALS,
+                        hint="Rotate credentials for a principal",
+                        input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
                     ),
                     Option(
                         Subcommands.UPDATE,
+                        hint="Update properties of a principal",
                         args=[
                             Argument(
                                 Arguments.SET_PROPERTY,
@@ -391,36 +488,50 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
                     ),
-                    Option(Subcommands.ACCESS, input_name=Arguments.PRINCIPAL),
+                    Option(
+                        Subcommands.ACCESS,
+                        hint="Retrieve access details for a principal",
+                        input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
+                    ),
                     Option(
                         Subcommands.RESET,
+                        hint="Reset credentials for a principal",
                         args=[
                             Argument(
                                 Arguments.NEW_CLIENT_ID,
                                 str,
-                                Hints.Principals.Reset.CLIENT_ID,
+                                "The new client ID for the principal",
                             ),
                             Argument(
                                 Arguments.NEW_CLIENT_SECRET,
                                 str,
-                                Hints.Principals.Reset.CLIENT_SECRET,
+                                "The new client secret for the principal",
                             ),
                         ],
                         input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
+                        hint="Display a summary for a principal",
                         input_name=Arguments.PRINCIPAL,
+                        input_metavar="PRINCIPAL_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _principal_roles_option() -> Option:
+        return Option(
                 Commands.PRINCIPAL_ROLES,
-                "manage principal roles",
+                hint="manage principal roles",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new principal role",
                         args=[
                             Argument(
                                 Arguments.PROPERTY,
@@ -430,27 +541,39 @@ class OptionTree:
                             )
                         ],
                         input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
                     ),
-                    Option(Subcommands.DELETE, input_name=Arguments.PRINCIPAL_ROLE),
-                    Option(Subcommands.GET, input_name=Arguments.PRINCIPAL_ROLE),
+                    Option(
+                        Subcommands.DELETE,
+                        hint="Delete a principal role",
+                        input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
+                    ),
+                    Option(
+                        Subcommands.GET,
+                        hint="Retrieve metadata for a principal role",
+                        input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
+                    ),
                     Option(
                         Subcommands.LIST,
-                        hint=Hints.PrincipalRoles.LIST,
+                        hint="List principal roles",
                         args=[
                             Argument(
                                 Arguments.CATALOG_ROLE,
                                 str,
-                                Hints.PrincipalRoles.List.CATALOG_ROLE,
+                                "Show only principal roles assigned to this catalog role",
                             ),
                             Argument(
                                 Arguments.PRINCIPAL,
                                 str,
-                                Hints.PrincipalRoles.List.PRINCIPAL_NAME,
+                                "Show only principal roles assigned to this principal",
                             ),
                         ],
                     ),
                     Option(
                         Subcommands.UPDATE,
+                        hint="Update properties of a principal role",
                         args=[
                             Argument(
                                 Arguments.SET_PROPERTY,
@@ -466,46 +589,57 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.GRANT,
-                        hint=Hints.PrincipalRoles.GRANT,
+                        hint="Grant a principal role to a principal",
                         args=[
                             Argument(
                                 Arguments.PRINCIPAL,
                                 str,
-                                Hints.PrincipalRoles.Grant.PRINCIPAL,
+                                "The name of a principal to grant this role to",
                             )
                         ],
                         input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.REVOKE,
-                        hint=Hints.PrincipalRoles.REVOKE,
+                        hint="Revoke a principal role from a principal",
                         args=[
                             Argument(
                                 Arguments.PRINCIPAL,
                                 str,
-                                Hints.PrincipalRoles.Revoke.PRINCIPAL,
+                                "The name of a principal to revoke this role from",
                             )
                         ],
                         input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
+                        hint="Display a summary for a principal role",
                         input_name=Arguments.PRINCIPAL_ROLE,
+                        input_metavar="PRINCIPAL_ROLE_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _catalog_roles_option() -> Option:
+        return Option(
                 Commands.CATALOG_ROLES,
-                "manage catalog roles",
+                hint="manage catalog roles",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new catalog role",
                         args=[
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.CATALOG,
+                                str,
+                                "The name of an existing catalog",
                             ),
                             Argument(
                                 Arguments.PROPERTY,
@@ -515,42 +649,55 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.DELETE,
+                        hint="Delete a catalog role",
                         args=[
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.CATALOG,
+                                str,
+                                "The name of an existing catalog",
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.GET,
+                        hint="Retrieve metadata for a catalog role",
                         args=[
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.CATALOG,
+                                str,
+                                "The name of an existing catalog",
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.LIST,
-                        hint=Hints.CatalogRoles.LIST,
+                        hint="List catalog roles",
                         args=[
                             Argument(
                                 Arguments.PRINCIPAL_ROLE,
                                 str,
-                                Hints.PrincipalRoles.PRINCIPAL_ROLE,
+                                "The name of a principal role to filter results",
                             )
                         ],
                         input_name=Arguments.CATALOG,
+                        input_metavar="CATALOG_NAME",
                     ),
                     Option(
                         Subcommands.UPDATE,
+                        hint="Update properties of a catalog role",
                         args=[
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.CATALOG,
+                                str,
+                                "The name of an existing catalog",
                             ),
                             Argument(
                                 Arguments.SET_PROPERTY,
@@ -566,175 +713,229 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.GRANT,
-                        hint=Hints.CatalogRoles.GRANT_CATALOG_ROLE,
+                        hint="Grant a catalog role to a principal role",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            ),
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
                                 Arguments.PRINCIPAL_ROLE,
                                 str,
-                                Hints.CatalogRoles.CATALOG_ROLE,
+                                "The name of a principal role",
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.REVOKE,
-                        hint=Hints.CatalogRoles.GRANT_CATALOG_ROLE,
+                        hint="Revoke a catalog role from a principal role",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            ),
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
                                 Arguments.PRINCIPAL_ROLE,
                                 str,
-                                Hints.CatalogRoles.CATALOG_ROLE,
+                                "The name of a principal role",
                             ),
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
+                        hint="Display a summary for a catalog role",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            )
+                            Argument(Arguments.CATALOG, str, "The name of a catalog")
                         ],
                         input_name=Arguments.CATALOG_ROLE,
+                        input_metavar="CATALOG_ROLE_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _privileges_option() -> Option:
+        return Option(
                 Commands.PRIVILEGES,
-                "manage privileges for a catalog role",
+                hint="manage privileges for a catalog role",
                 children=[
-                    Option(Subcommands.LIST, args=OptionTree._CATALOG_ROLE_AND_CATALOG),
+                    Option(
+                        Subcommands.LIST,
+                        hint="List privilege grants",
+                        args=OptionTree._CATALOG_ROLE_AND_CATALOG,
+                    ),
                     Option(
                         Subcommands.CATALOG,
+                        hint="Manage catalog-level privileges",
                         children=[
                             Option(
                                 Actions.GRANT,
+                                hint="Grant a catalog-level privilege",
                                 args=OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                             Option(
                                 Actions.REVOKE,
+                                hint="Revoke a catalog-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.CASCADE, bool, Hints.Grant.CASCADE
+                                        Arguments.CASCADE,
+                                        bool,
+                                        "Cascade the revocation to dependent privileges",
                                     )
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                         ],
                     ),
                     Option(
                         Subcommands.NAMESPACE,
+                        hint="Manage namespace-level privileges",
                         children=[
                             Option(
                                 Actions.GRANT,
+                                hint="Grant a namespace-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     )
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                             Option(
                                 Actions.REVOKE,
+                                hint="Revoke a namespace-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     ),
                                     Argument(
-                                        Arguments.CASCADE, bool, Hints.Grant.CASCADE
+                                        Arguments.CASCADE,
+                                        bool,
+                                        "Cascade the revocation to dependent privileges",
                                     ),
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                         ],
                     ),
                     Option(
                         Subcommands.TABLE,
+                        hint="Manage table-level privileges",
                         children=[
                             Option(
                                 Actions.GRANT,
+                                hint="Grant a table-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     ),
-                                    Argument(Arguments.TABLE, str, Hints.Grant.TABLE),
+                                    Argument(
+                                        Arguments.TABLE, str, "The name of a table"
+                                    ),
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                             Option(
                                 Actions.REVOKE,
+                                hint="Revoke a table-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     ),
-                                    Argument(Arguments.TABLE, str, Hints.Grant.TABLE),
                                     Argument(
-                                        Arguments.CASCADE, bool, Hints.Grant.CASCADE
+                                        Arguments.TABLE, str, "The name of a table"
+                                    ),
+                                    Argument(
+                                        Arguments.CASCADE,
+                                        bool,
+                                        "Cascade the revocation to dependent privileges",
                                     ),
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                         ],
                     ),
                     Option(
                         Subcommands.VIEW,
+                        hint="Manage view-level privileges",
                         children=[
                             Option(
                                 Actions.GRANT,
+                                hint="Grant a view-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     ),
-                                    Argument(Arguments.VIEW, str, Hints.Grant.VIEW),
+                                    Argument(Arguments.VIEW, str, "The name of a view"),
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                             Option(
                                 Actions.REVOKE,
+                                hint="Revoke a view-level privilege",
                                 args=[
                                     Argument(
-                                        Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE
+                                        Arguments.NAMESPACE,
+                                        str,
+                                        "A period-delimited namespace",
                                     ),
-                                    Argument(Arguments.VIEW, str, Hints.Grant.VIEW),
+                                    Argument(Arguments.VIEW, str, "The name of a view"),
                                     Argument(
-                                        Arguments.CASCADE, bool, Hints.Grant.CASCADE
+                                        Arguments.CASCADE,
+                                        bool,
+                                        "Cascade the revocation to dependent privileges",
                                     ),
                                 ]
                                 + OptionTree._CATALOG_ROLE_AND_CATALOG,
                                 input_name=Arguments.PRIVILEGE,
+                                input_metavar="PRIVILEGE_NAME",
                             ),
                         ],
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _namespaces_option() -> Option:
+        return Option(
                 Commands.NAMESPACES,
-                "manage namespaces",
+                hint="manage namespaces",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new namespace",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            ),
-                            Argument(
-                                Arguments.LOCATION, str, Hints.Namespaces.LOCATION
+                                Arguments.LOCATION,
+                                str,
+                                "The storage location for the namespace",
                             ),
                             Argument(
                                 Arguments.PROPERTY,
@@ -744,265 +945,356 @@ class OptionTree:
                             ),
                         ],
                         input_name=Arguments.NAMESPACE,
+                        input_metavar="NAMESPACE",
                     ),
                     Option(
                         Subcommands.LIST,
+                        hint="List namespaces",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.PARENT,
+                                str,
+                                "The parent namespace to list sub-namespaces from",
                             ),
-                            Argument(Arguments.PARENT, str, Hints.Namespaces.PARENT),
                         ],
                     ),
                     Option(
                         Subcommands.DELETE,
+                        hint="Delete a namespace",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            )
+                            Argument(Arguments.CATALOG, str, "The name of a catalog")
                         ],
                         input_name=Arguments.NAMESPACE,
+                        input_metavar="NAMESPACE",
                     ),
                     Option(
                         Subcommands.GET,
+                        hint="Retrieve metadata for a namespace",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            )
+                            Argument(Arguments.CATALOG, str, "The name of a catalog")
                         ],
                         input_name=Arguments.NAMESPACE,
+                        input_metavar="NAMESPACE",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
+                        hint="Display a summary for a namespace",
                         args=[
-                            Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            )
+                            Argument(Arguments.CATALOG, str, "The name of a catalog")
                         ],
                         input_name=Arguments.NAMESPACE,
+                        input_metavar="NAMESPACE",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _profiles_option() -> Option:
+        return Option(
                 Commands.PROFILES,
-                "manage profiles",
-                children=[
-                    Option(Subcommands.CREATE, input_name=Arguments.PROFILE),
-                    Option(Subcommands.DELETE, input_name=Arguments.PROFILE),
-                    Option(Subcommands.UPDATE, input_name=Arguments.PROFILE),
-                    Option(Subcommands.GET, input_name=Arguments.PROFILE),
-                    Option(Subcommands.LIST),
-                ],
-            ),
-            Option(
-                Commands.POLICIES,
-                "manage policies",
+                hint="manage profiles",
                 children=[
                     Option(
                         Subcommands.CREATE,
+                        hint="Create a new profile",
+                        input_name=Arguments.PROFILE,
+                        input_metavar="PROFILE_NAME",
+                    ),
+                    Option(
+                        Subcommands.DELETE,
+                        hint="Delete a profile",
+                        input_name=Arguments.PROFILE,
+                        input_metavar="PROFILE_NAME",
+                    ),
+                    Option(
+                        Subcommands.UPDATE,
+                        hint="Update properties of a profile",
+                        input_name=Arguments.PROFILE,
+                        input_metavar="PROFILE_NAME",
+                    ),
+                    Option(
+                        Subcommands.GET,
+                        hint="Retrieve metadata for a profile",
+                        input_name=Arguments.PROFILE,
+                        input_metavar="PROFILE_NAME",
+                    ),
+                    Option(Subcommands.LIST, hint="List profiles"),
+                ],
+            )
+
+    @staticmethod
+    def _policies_option() -> Option:
+        return             Option(
+                Commands.POLICIES,
+                hint="manage policies",
+                children=[
+                    Option(
+                        Subcommands.CREATE,
+                        hint="Create a new policy",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
-                            Argument(
-                                Arguments.POLICY_FILE, str, Hints.Policies.POLICY_FILE
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
                             Argument(
-                                Arguments.POLICY_TYPE, str, Hints.Policies.POLICY_TYPE
+                                Arguments.POLICY_FILE,
+                                str,
+                                "Path to the JSON file containing the policy definition",
+                            ),
+                            Argument(
+                                Arguments.POLICY_TYPE,
+                                str,
+                                "The type of the policy (e.g., 'system.data-compaction')",
                             ),
                             Argument(
                                 Arguments.POLICY_DESCRIPTION,
                                 str,
-                                Hints.Policies.POLICY_DESCRIPTION,
+                                "An optional description for the policy",
                             ),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                     Option(
                         Subcommands.DELETE,
+                        hint="Delete a policy",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                             Argument(
-                                Arguments.DETACH_ALL, bool, Hints.Policies.DETACH_ALL
+                                Arguments.DETACH_ALL,
+                                bool,
+                                "Delete the policy and all its attached mappings",
                             ),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                     Option(
                         Subcommands.GET,
+                        hint="Retrieve metadata for a policy",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                     Option(
                         Subcommands.LIST,
+                        hint="List policies",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
-                            ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
-                            Argument(
-                                Arguments.TARGET_NAME, str, Hints.Policies.TARGET_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
                             Argument(
-                                Arguments.APPLICABLE, bool, Hints.Policies.APPLICABLE
+                                Arguments.TARGET_NAME,
+                                str,
+                                "The name of the target entity",
                             ),
                             Argument(
-                                Arguments.POLICY_TYPE, str, Hints.Policies.POLICY_TYPE
+                                Arguments.APPLICABLE,
+                                bool,
+                                "List policies applicable to the target (considering inheritance)",
+                            ),
+                            Argument(
+                                Arguments.POLICY_TYPE,
+                                str,
+                                "The type of the policy (e.g., 'system.data-compaction')",
                             ),
                         ],
                     ),
                     Option(
                         Subcommands.UPDATE,
+                        hint="Update properties of a policy",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                             Argument(
-                                Arguments.POLICY_FILE, str, Hints.Policies.POLICY_FILE
+                                Arguments.POLICY_FILE,
+                                str,
+                                "Path to the JSON file containing the policy definition",
                             ),
                             Argument(
                                 Arguments.POLICY_DESCRIPTION,
                                 str,
-                                Hints.Policies.POLICY_DESCRIPTION,
+                                "An optional description for the policy",
                             ),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                     Option(
                         Subcommands.ATTACH,
+                        hint="Attach a policy to an entity",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                             Argument(
                                 Arguments.ATTACHMENT_TYPE,
                                 str,
-                                Hints.Policies.ATTACHMENT_TYPE,
+                                "The type of entity to attach to ('catalog', 'namespace', 'table-like')",
                             ),
                             Argument(
                                 Arguments.ATTACHMENT_PATH,
                                 str,
-                                Hints.Policies.ATTACHMENT_PATH,
+                                "The path of the target entity (e.g., 'ns1.tb1')",
                             ),
                             Argument(
                                 Arguments.PARAMETERS,
                                 str,
-                                Hints.Policies.PARAMETERS,
+                                "Key-value pairs for the attachment (e.g., key=value)",
                                 allow_repeats=True,
                             ),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                     Option(
                         Subcommands.DETACH,
+                        hint="Detach a policy from an entity",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                             Argument(
                                 Arguments.ATTACHMENT_TYPE,
                                 str,
-                                Hints.Policies.ATTACHMENT_TYPE,
+                                "The type of entity to attach to ('catalog', 'namespace', 'table-like')",
                             ),
                             Argument(
                                 Arguments.ATTACHMENT_PATH,
                                 str,
-                                Hints.Policies.ATTACHMENT_PATH,
+                                "The path of the target entity (e.g., 'ns1.tb1')",
                             ),
                             Argument(
                                 Arguments.PARAMETERS,
                                 str,
-                                Hints.Policies.PARAMETERS,
+                                "Key-value pairs for the attachment (e.g., key=value)",
                                 allow_repeats=True,
                             ),
                         ],
                         input_name=Arguments.POLICY,
+                        input_metavar="POLICY_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _setup_option() -> Option:
+        return Option(
                 Commands.SETUP,
-                "perform setup",
+                hint="perform setup",
                 children=[
                     Option(
                         Subcommands.APPLY,
-                        args=[Argument(Arguments.DRY_RUN, bool, Hints.Setup.DRY_RUN)],
+                        hint="Apply a setup configuration",
+                        args=[
+                            Argument(Arguments.DRY_RUN, bool, "Run without executing")
+                        ],
                         input_name=Arguments.SETUP_CONFIG,
+                        input_metavar="SETUP_CONFIG_FILE",
                     ),
-                    Option(Subcommands.EXPORT),
+                    Option(Subcommands.EXPORT, hint="Export current configuration"),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _tables_option() -> Option:
+        return Option(
                 Commands.TABLES,
-                "manage tables",
+                hint="manage tables",
                 children=[
                     Option(
                         Subcommands.LIST,
+                        hint="List tables",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                         ],
                     ),
                     Option(
                         Subcommands.GET,
+                        hint="Retrieve metadata for a table",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                         ],
                         input_name=Arguments.TABLE,
+                        input_metavar="TABLE_NAME",
                     ),
                     Option(
                         Subcommands.SUMMARIZE,
-                        hint=Hints.Tables.SUMMARIZE,
+                        hint="Display a summary for a table",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                         ],
                         input_name=Arguments.TABLE,
+                        input_metavar="TABLE_NAME",
                     ),
                     Option(
                         Subcommands.DELETE,
-                        hint=Hints.Tables.DELETE,
+                        hint="De-register a table from catalog",
                         args=[
+                            Argument(Arguments.CATALOG, str, "The name of a catalog"),
                             Argument(
-                                Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME
+                                Arguments.NAMESPACE, str, "A period-delimited namespace"
                             ),
-                            Argument(Arguments.NAMESPACE, str, Hints.Grant.NAMESPACE),
                         ],
                         input_name=Arguments.TABLE,
+                        input_metavar="TABLE_NAME",
                     ),
                 ],
-            ),
-            Option(
+            )
+
+    @staticmethod
+    def _find_option() -> Option:
+        return Option(
                 Commands.FIND,
-                "find an identifier",
+                hint="find an identifier",
                 args=[
-                    Argument(Arguments.CATALOG, str, Hints.CatalogRoles.CATALOG_NAME),
+                    Argument(Arguments.CATALOG, str, "The name of a catalog"),
                     Argument(
                         Arguments.TYPE,
                         str,
-                        Hints.Find.TYPE,
+                        "Filter results by entity type",
                         choices=[e.value for e in EntityType],
                     ),
                 ],
                 input_name=Arguments.IDENTIFIER,
-            ),
+                input_metavar="IDENTIFIER",
+            )
+
+    @staticmethod
+    def get_tree() -> List[Option]:
+        return [
+            OptionTree._catalogs_option(),
+            OptionTree._principals_option(),
+            OptionTree._principal_roles_option(),
+            OptionTree._catalog_roles_option(),
+            OptionTree._privileges_option(),
+            OptionTree._namespaces_option(),
+            OptionTree._profiles_option(),
+            OptionTree._policies_option(),
+            OptionTree._setup_option(),
+            OptionTree._tables_option(),
+            OptionTree._find_option(),
         ]
