@@ -43,7 +43,7 @@ Global Options:
   --header HEADER                Context header name (default: Polaris-Realm)
   --profile PROFILE              Polaris profile name
   --proxy PROXY                  Proxy URL
-  --debug                        Enable debug logging
+  --debug                        Enable debug mode
 ```
 
 `COMMAND` must be one of the following:
@@ -153,105 +153,67 @@ The `create` subcommand is used to create a catalog.
 usage: polaris catalogs create [-h] [options] CATALOG_NAME
 
 positional arguments:
-  CATALOG_NAME                      catalog
+  CATALOG_NAME                                                         catalog
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                                                           show this help message and exit
 
 Command Options:
-  --type {internal,external}        The type of catalog [INTERNAL, EXTERNAL]
-  --storage-type {s3,azure,gcs,file}
-                                    The storage type [S3, AZURE, GCS, FILE]
-  --default-base-location DEFAULT_BASE_LOCATION
-                                    Default base location for the catalog
-  --allowed-location ALLOWED_LOCATION
-                                    An allowed location for files tracked by the catalog
-  --property PROPERTY               A key/value pair such as: tag=value. Multiple can be provided by
-                                    specifying this option more than once
+  --type {internal,external}                                           The type of catalog [INTERNAL, EXTERNAL]
+  --storage-type {s3,azure,gcs,file}                                   (Required) The storage type [S3, AZURE, GCS, FILE]
+  --default-base-location DEFAULT_BASE_LOCATION                        (Required) Default base location for the catalog
+  --allowed-location ALLOWED_LOCATION                                  An allowed location for files tracked by the catalog
+  --property PROPERTY                                                  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 
 AWS S3 Storage Options:
-  --endpoint ENDPOINT               The S3 endpoint to use when connecting to S3
-  --endpoint-internal ENDPOINT_INTERNAL
-                                    The S3 endpoint used by Polaris to use when connecting to S3, if
-                                    different from the one that clients use
-  --sts-endpoint STS_ENDPOINT       The STS endpoint to use when connecting to STS
-  --no-sts                          Indicates that Polaris should not use STS (e.g. if STS is not
-                                    available)
-  --no-kms                          Indicates that Polaris should not use KMS (e.g. if KMS is not
-                                    available)
-  --path-style-access               Whether to use path-style-access for S3
-  --current-kms-key CURRENT_KMS_KEY
-                                    The AWS KMS key ARN to be used for encrypting new S3 data
-  --allowed-kms-key ALLOWED_KMS_KEY
-                                    AWS KMS key ARN(s) that this catalog and its clients are allowed
-                                    to use for reading S3 data (zero or more)
-  --role-arn ROLE_ARN               A role ARN to use when connecting to S3
-  --region REGION                   The region to use when connecting to S3
-  --external-id EXTERNAL_ID         The external ID to use when connecting to S3
+  --endpoint ENDPOINT                                                  The S3 endpoint to use when connecting to S3
+  --endpoint-internal ENDPOINT_INTERNAL                                The S3 endpoint used by Polaris to use when connecting to S3, if different from the one that clients use
+  --sts-endpoint STS_ENDPOINT                                          The STS endpoint to use when connecting to STS
+  --no-sts                                                             Indicates that Polaris should not use STS (e.g. if STS is not available)
+  --no-kms                                                             Indicates that Polaris should not use KMS (e.g. if KMS is not available)
+  --path-style-access                                                  Whether to use path-style-access for S3
+  --current-kms-key CURRENT_KMS_KEY                                    The AWS KMS key ARN to be used for encrypting new S3 data
+  --allowed-kms-key ALLOWED_KMS_KEY                                    AWS KMS key ARN(s) that this catalog and its clients are allowed to use for reading S3 data (zero or more)
+  --role-arn ROLE_ARN                                                  A role ARN to use when connecting to S3
+  --region REGION                                                      The region to use when connecting to S3
+  --external-id EXTERNAL_ID                                            The external ID to use when connecting to S3
 
 Azure Storage Options:
-  --tenant-id TENANT_ID             A tenant ID to use when connecting to Azure Storage
-  --multi-tenant-app-name MULTI_TENANT_APP_NAME
-                                    The app name to use when connecting to Azure Storage
-  --hierarchical                    Indicates whether the referenced Azure storage location(s)
-                                    support hierarchical namespaces
-  --consent-url CONSENT_URL         A consent URL granting permissions for the Azure Storage
-                                    location
+  --tenant-id TENANT_ID                                                (Required) A tenant ID to use when connecting to Azure Storage
+  --multi-tenant-app-name MULTI_TENANT_APP_NAME                        The app name to use when connecting to Azure Storage
+  --hierarchical                                                       Indicates whether the referenced Azure storage location(s) support hierarchical namespaces
+  --consent-url CONSENT_URL                                            A consent URL granting permissions for the Azure Storage location
 
 GCP Storage Options:
-  --service-account SERVICE_ACCOUNT
-                                    The service account to use when connecting to GCS
+  --service-account SERVICE_ACCOUNT                                    The service account to use when connecting to GCS
 
 External Catalog Federation: General Options:
-  --catalog-connection-type {hadoop,iceberg-rest,hive}
-                                    External catalog type [ICEBERG-REST, HADOOP, HIVE]
-  --iceberg-remote-catalog-name ICEBERG_REMOTE_CATALOG_NAME
-                                    The remote catalog name when federating to an Iceberg REST
-                                    catalog
-  --hadoop-warehouse HADOOP_WAREHOUSE
-                                    The warehouse to use when federating to a HADOOP catalog
-  --hive-warehouse HIVE_WAREHOUSE   The warehouse to use when federating to a HIVE catalog
-  --catalog-authentication-type {oauth,bearer,sigv4,implicit}
-                                    Authentication type [OAUTH, BEARER, SIGV4, IMPLICIT]
-  --catalog-service-identity-type {aws_iam}
-                                    Service identity type [AWS_IAM]
-  --catalog-uri CATALOG_URI         The URI of the external catalog
+  --catalog-connection-type {hadoop,iceberg-rest,hive}                 External catalog type [ICEBERG-REST, HADOOP, HIVE]
+  --iceberg-remote-catalog-name ICEBERG_REMOTE_CATALOG_NAME            The remote catalog name when federating to an Iceberg REST catalog
+  --hadoop-warehouse HADOOP_WAREHOUSE                                  The warehouse to use when federating to a HADOOP catalog
+  --hive-warehouse HIVE_WAREHOUSE                                      The warehouse to use when federating to a HIVE catalog
+  --catalog-authentication-type {oauth,bearer,sigv4,implicit}          Authentication type [OAUTH, BEARER, SIGV4, IMPLICIT]
+  --catalog-service-identity-type {aws_iam}                            Service identity type [AWS_IAM]
+  --catalog-uri CATALOG_URI                                            The URI of the external catalog
 
 External Catalog Federation: AWS IAM Identity Options:
-  --catalog-service-identity-iam-arn CATALOG_SERVICE_IDENTITY_IAM_ARN
-                                    The ARN of the IAM user or IAM role Polaris uses to assume roles
-                                    and then access external resources.
+  --catalog-service-identity-iam-arn CATALOG_SERVICE_IDENTITY_IAM_ARN  The ARN of the IAM user or IAM role Polaris uses to assume roles and then access external resources.
 
 External Catalog Federation: OAuth Options:
-  --catalog-token-uri CATALOG_TOKEN_URI
-                                    Token server URI
-  --catalog-client-id CATALOG_CLIENT_ID
-                                    OAuth client ID
-  --catalog-client-secret CATALOG_CLIENT_SECRET
-                                    OAuth client secret (input-only)
-  --catalog-client-scope CATALOG_CLIENT_SCOPE
-                                    OAuth scopes to specify when exchanging for a short-lived access
-                                    token. Multiple can be provided by specifying this option more
-                                    than once
+  --catalog-token-uri CATALOG_TOKEN_URI                                Token server URI
+  --catalog-client-id CATALOG_CLIENT_ID                                OAuth client ID
+  --catalog-client-secret CATALOG_CLIENT_SECRET                        OAuth client secret (input-only)
+  --catalog-client-scope CATALOG_CLIENT_SCOPE                          OAuth scopes to specify when exchanging for a short-lived access token. Multiple can be provided by specifying this option more than once
 
 External Catalog Federation: Bearer Token Options:
-  --catalog-bearer-token CATALOG_BEARER_TOKEN
-                                    Bearer token (input-only)
+  --catalog-bearer-token CATALOG_BEARER_TOKEN                          Bearer token (input-only)
 
 External Catalog Federation: AWS SigV4 Options:
-  --catalog-role-arn CATALOG_ROLE_ARN
-                                    The AWS IAM role ARN assumed by Polaris when signing requests
-  --catalog-role-session-name CATALOG_ROLE_SESSION_NAME
-                                    The role session name to be used by the SigV4 protocol for
-                                    signing requests
-  --catalog-external-id CATALOG_EXTERNAL_ID
-                                    An optional external ID used to establish a AWS trust
-                                    relationship
-  --catalog-signing-region CATALOG_SIGNING_REGION
-                                    Region to be used by the SigV4 protocol for signing requests
-  --catalog-signing-name CATALOG_SIGNING_NAME
-                                    The service name to be used by the SigV4 protocol for signing
-                                    requests
+  --catalog-role-arn CATALOG_ROLE_ARN                                  The AWS IAM role ARN assumed by Polaris when signing requests
+  --catalog-role-session-name CATALOG_ROLE_SESSION_NAME                The role session name to be used by the SigV4 protocol for signing requests
+  --catalog-external-id CATALOG_EXTERNAL_ID                            An optional external ID used to establish a AWS trust relationship
+  --catalog-signing-region CATALOG_SIGNING_REGION                      Region to be used by the SigV4 protocol for signing requests
+  --catalog-signing-name CATALOG_SIGNING_NAME                          The service name to be used by the SigV4 protocol for signing requests
 ```
 
 ##### Examples
@@ -282,7 +244,6 @@ polaris catalogs create \
 The `delete` subcommand is used to delete a catalog.
 
 ```
-➜  polaris git:(cli_ux_improvement) ✗ ./polaris catalogs delete --help
 usage: polaris catalogs delete [-h] [options] CATALOG_NAME
 
 positional arguments:
@@ -370,29 +331,19 @@ The `update` subcommand is used to update a catalog. Currently, this command sup
 usage: polaris catalogs update [-h] [options] CATALOG_NAME
 
 positional arguments:
-  CATALOG_NAME                      catalog
+  CATALOG_NAME                                   catalog
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                                     show this help message and exit
 
 Command Options:
-  --default-base-location DEFAULT_BASE_LOCATION
-                                    A new default base location for the catalog
-  --allowed-location ALLOWED_LOCATION
-                                    An additional allowed location for files
-  --set-property SET_PROPERTY       A key/value pair such as: tag=value. Merges the specified
-                                    key/value into an existing properties map by updating the value
-                                    if the key already exists or creating a new entry if not.
-                                    Multiple can be provided by specifying this option more than
-                                    once
-  --remove-property REMOVE_PROPERTY
-                                    A key to remove from a properties map. If the key already does
-                                    not exist then no action is taken for the specified key.
-                                    Multiple can be provided by specifying this option more than
-                                    once
+  --default-base-location DEFAULT_BASE_LOCATION  A new default base location for the catalog
+  --allowed-location ALLOWED_LOCATION            An additional allowed location for files
+  --set-property SET_PROPERTY                    A key/value pair such as: tag=value. Merges the specified key/value into an existing properties map by updating the value if the key already exists or creating a new entry if not. Multiple can be provided by specifying this option more than once
+  --remove-property REMOVE_PROPERTY              A key to remove from a properties map. If the key already does not exist then no action is taken for the specified key. Multiple can be provided by specifying this option more than once
 
 AWS S3 Storage Options:
-  --region REGION                   The region to use when connecting to S3
+  --region REGION                                The region to use when connecting to S3
 ```
 
 ##### Examples
@@ -433,8 +384,7 @@ options:
 
 Command Options:
   --type {service}     The type of principal [SERVICE]
-  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying
-                       this option more than once
+  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -529,22 +479,14 @@ The `update` subcommand is used to update a principal. Currently, this supports 
 usage: polaris principals update [-h] [options] PRINCIPAL_NAME
 
 positional arguments:
-  PRINCIPAL_NAME                    principal
+  PRINCIPAL_NAME                     principal
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                         show this help message and exit
 
 Command Options:
-  --set-property SET_PROPERTY       A key/value pair such as: tag=value. Merges the specified
-                                    key/value into an existing properties map by updating the value
-                                    if the key already exists or creating a new entry if not.
-                                    Multiple can be provided by specifying this option more than
-                                    once
-  --remove-property REMOVE_PROPERTY
-                                    A key to remove from a properties map. If the key already does
-                                    not exist then no action is taken for the specified key.
-                                    Multiple can be provided by specifying this option more than
-                                    once
+  --set-property SET_PROPERTY        A key/value pair such as: tag=value. Merges the specified key/value into an existing properties map by updating the value if the key already exists or creating a new entry if not. Multiple can be provided by specifying this option more than once
+  --remove-property REMOVE_PROPERTY  A key to remove from a properties map. If the key already does not exist then no action is taken for the specified key. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -583,15 +525,14 @@ The `reset` subcommand is used to reset principal credentials.
 usage: polaris principals reset [-h] [options] PRINCIPAL_NAME
 
 positional arguments:
-  PRINCIPAL_NAME                    principal
+  PRINCIPAL_NAME                         principal
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                             show this help message and exit
 
 Command Options:
-  --new-client-id NEW_CLIENT_ID     The new client ID for the principal
-  --new-client-secret NEW_CLIENT_SECRET
-                                    The new client secret for the principal
+  --new-client-id NEW_CLIENT_ID          The new client ID for the principal
+  --new-client-secret NEW_CLIENT_SECRET  The new client secret for the principal
 ```
 
 ##### Examples
@@ -654,8 +595,7 @@ options:
   -h, --help           show this help message and exit
 
 Command Options:
-  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying
-                       this option more than once
+  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -743,22 +683,14 @@ The `update` subcommand is used to update a principal role. Currently, this supp
 usage: polaris principal-roles update [-h] [options] PRINCIPAL_ROLE_NAME
 
 positional arguments:
-  PRINCIPAL_ROLE_NAME               principal role
+  PRINCIPAL_ROLE_NAME                principal role
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                         show this help message and exit
 
 Command Options:
-  --set-property SET_PROPERTY       A key/value pair such as: tag=value. Merges the specified
-                                    key/value into an existing properties map by updating the value
-                                    if the key already exists or creating a new entry if not.
-                                    Multiple can be provided by specifying this option more than
-                                    once
-  --remove-property REMOVE_PROPERTY
-                                    A key to remove from a properties map. If the key already does
-                                    not exist then no action is taken for the specified key.
-                                    Multiple can be provided by specifying this option more than
-                                    once
+  --set-property SET_PROPERTY        A key/value pair such as: tag=value. Merges the specified key/value into an existing properties map by updating the value if the key already exists or creating a new entry if not. Multiple can be provided by specifying this option more than once
+  --remove-property REMOVE_PROPERTY  A key to remove from a properties map. If the key already does not exist then no action is taken for the specified key. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -869,8 +801,7 @@ options:
 
 Command Options:
   --catalog CATALOG    The name of an existing catalog
-  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying
-                       this option more than once
+  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -964,23 +895,15 @@ The `update` subcommand is used to update a catalog role. Currently, only updati
 usage: polaris catalog-roles update [-h] [options] CATALOG_ROLE_NAME
 
 positional arguments:
-  CATALOG_ROLE_NAME                 catalog role
+  CATALOG_ROLE_NAME                  catalog role
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                         show this help message and exit
 
 Command Options:
-  --catalog CATALOG                 The name of an existing catalog
-  --set-property SET_PROPERTY       A key/value pair such as: tag=value. Merges the specified
-                                    key/value into an existing properties map by updating the value
-                                    if the key already exists or creating a new entry if not.
-                                    Multiple can be provided by specifying this option more than
-                                    once
-  --remove-property REMOVE_PROPERTY
-                                    A key to remove from a properties map. If the key already does
-                                    not exist then no action is taken for the specified key.
-                                    Multiple can be provided by specifying this option more than
-                                    once
+  --catalog CATALOG                  The name of an existing catalog
+  --set-property SET_PROPERTY        A key/value pair such as: tag=value. Merges the specified key/value into an existing properties map by updating the value if the key already exists or creating a new entry if not. Multiple can be provided by specifying this option more than once
+  --remove-property REMOVE_PROPERTY  A key to remove from a properties map. If the key already does not exist then no action is taken for the specified key. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -1096,8 +1019,7 @@ options:
 Command Options:
   --catalog CATALOG    The name of a catalog
   --location LOCATION  The storage location for the namespace
-  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying
-                       this option more than once
+  --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 ```
 
 ##### Examples
@@ -1527,20 +1449,17 @@ The `attach` subcommand is used to create a mapping between a policy and a resou
 usage: polaris policies attach [-h] [options] POLICY_NAME
 
 positional arguments:
-  POLICY_NAME                       policy
+  POLICY_NAME                        policy
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                         show this help message and exit
 
 Command Options:
-  --catalog CATALOG                 The name of a catalog
-  --namespace NAMESPACE             A period-delimited namespace
-  --attachment-type ATTACHMENT_TYPE
-                                    The type of entity to attach to ('catalog', 'namespace', 'table-
-                                    like')
-  --attachment-path ATTACHMENT_PATH
-                                    The path of the target entity (e.g., 'ns1.tb1')
-  --parameters PARAMETERS           Key-value pairs for the attachment (e.g., key=value)
+  --catalog CATALOG                  The name of a catalog
+  --namespace NAMESPACE              A period-delimited namespace
+  --attachment-type ATTACHMENT_TYPE  The type of entity to attach to ('catalog', 'namespace', 'table-like')
+  --attachment-path ATTACHMENT_PATH  The path of the target entity (e.g., 'ns1.tb1')
+  --parameters PARAMETERS            Key-value pairs for the attachment (e.g., key=value)
 ```
 
 ##### Examples
@@ -1559,18 +1478,17 @@ The `create` subcommand is used to create a policy.
 usage: polaris policies create [-h] [options] POLICY_NAME
 
 positional arguments:
-  POLICY_NAME                       policy
+  POLICY_NAME                              policy
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                               show this help message and exit
 
 Command Options:
-  --catalog CATALOG                 The name of a catalog
-  --namespace NAMESPACE             A period-delimited namespace
-  --policy-file POLICY_FILE         Path to the JSON file containing the policy definition
-  --policy-type POLICY_TYPE         The type of the policy (e.g., 'system.data-compaction')
-  --policy-description POLICY_DESCRIPTION
-                                    An optional description for the policy
+  --catalog CATALOG                        The name of a catalog
+  --namespace NAMESPACE                    A period-delimited namespace
+  --policy-file POLICY_FILE                Path to the JSON file containing the policy definition
+  --policy-type POLICY_TYPE                The type of the policy (e.g., 'system.data-compaction')
+  --policy-description POLICY_DESCRIPTION  An optional description for the policy
 ```
 
 ##### Examples
@@ -1616,20 +1534,17 @@ The `detach` subcommand is used to remove a mapping between a policy and a targe
 usage: polaris policies detach [-h] [options] POLICY_NAME
 
 positional arguments:
-  POLICY_NAME                       policy
+  POLICY_NAME                        policy
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                         show this help message and exit
 
 Command Options:
-  --catalog CATALOG                 The name of a catalog
-  --namespace NAMESPACE             A period-delimited namespace
-  --attachment-type ATTACHMENT_TYPE
-                                    The type of entity to attach to ('catalog', 'namespace', 'table-
-                                    like')
-  --attachment-path ATTACHMENT_PATH
-                                    The path of the target entity (e.g., 'ns1.tb1')
-  --parameters PARAMETERS           Key-value pairs for the attachment (e.g., key=value)
+  --catalog CATALOG                  The name of a catalog
+  --namespace NAMESPACE              A period-delimited namespace
+  --attachment-type ATTACHMENT_TYPE  The type of entity to attach to ('catalog', 'namespace', 'table-like')
+  --attachment-path ATTACHMENT_PATH  The path of the target entity (e.g., 'ns1.tb1')
+  --parameters PARAMETERS            Key-value pairs for the attachment (e.g., key=value)
 ```
 
 ##### Examples
@@ -1698,17 +1613,16 @@ The `update` subcommand is used to update a policy.
 usage: polaris policies update [-h] [options] POLICY_NAME
 
 positional arguments:
-  POLICY_NAME                       policy
+  POLICY_NAME                              policy
 
 options:
-  -h, --help                        show this help message and exit
+  -h, --help                               show this help message and exit
 
 Command Options:
-  --catalog CATALOG                 The name of a catalog
-  --namespace NAMESPACE             A period-delimited namespace
-  --policy-file POLICY_FILE         Path to the JSON file containing the policy definition
-  --policy-description POLICY_DESCRIPTION
-                                    An optional description for the policy
+  --catalog CATALOG                        The name of a catalog
+  --namespace NAMESPACE                    A period-delimited namespace
+  --policy-file POLICY_FILE                Path to the JSON file containing the policy definition
+  --policy-description POLICY_DESCRIPTION  An optional description for the policy
 ```
 
 ##### Examples

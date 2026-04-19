@@ -25,7 +25,7 @@ from apache_polaris.cli.options.option_tree import OptionTree, Option, Argument
 
 class PolarisHelpFormatter(argparse.HelpFormatter):
     def __init__(self, prog: str) -> None:
-        super().__init__(prog, max_help_position=32, width=100)
+        super().__init__(prog, max_help_position=100)
 
 
 class Parser(object):
