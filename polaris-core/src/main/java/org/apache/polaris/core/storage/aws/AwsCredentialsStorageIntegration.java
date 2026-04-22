@@ -95,6 +95,7 @@ public class AwsCredentialsStorageIntegration
         realmConfig.getConfig(STORAGE_CREDENTIAL_DURATION_SECONDS);
     AwsStorageConfigurationInfo storageConfig = config();
     String region = storageConfig.getRegion();
+    String regionToUse = region != null ? region : "dummy-region";
     StorageAccessConfig.Builder accessConfig = StorageAccessConfig.builder();
 
     boolean includePrincipalNameInSubscopedCredential =
@@ -124,7 +125,7 @@ public class AwsCredentialsStorageIntegration
                           allowListOperation,
                           allowedReadLocations,
                           allowedWriteLocations,
-                          region)
+                          regionToUse)
                       .toJson())
               .durationSeconds(storageCredentialDurationSeconds);
 
@@ -149,7 +150,8 @@ public class AwsCredentialsStorageIntegration
       @SuppressWarnings("resource")
       // Note: stsClientProvider returns "thin" clients that do not need closing
       StsClient stsClient =
-          stsClientProvider.stsClient(StsDestination.of(storageConfig.getStsEndpointUri(), region));
+          stsClientProvider.stsClient(
+              StsDestination.of(storageConfig.getStsEndpointUri(), regionToUse));
 
       AssumeRoleResponse response = stsClient.assumeRole(request.build());
       accessConfig.put(StorageAccessProperty.AWS_KEY_ID, response.credentials().accessKeyId());
@@ -167,7 +169,6 @@ public class AwsCredentialsStorageIntegration
               });
     }
 
-    String regionToUse = region != null ? region : "dummy-region";
     accessConfig.put(StorageAccessProperty.CLIENT_REGION, regionToUse);
 
     refreshCredentialsEndpoint.ifPresent(
