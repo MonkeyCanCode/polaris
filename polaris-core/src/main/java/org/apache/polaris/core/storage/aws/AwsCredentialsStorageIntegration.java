@@ -167,9 +167,8 @@ public class AwsCredentialsStorageIntegration
               });
     }
 
-    if (region != null) {
-      accessConfig.put(StorageAccessProperty.CLIENT_REGION, region);
-    }
+    String regionToUse = region != null ? region : "dummy-region";
+    accessConfig.put(StorageAccessProperty.CLIENT_REGION, regionToUse);
 
     refreshCredentialsEndpoint.ifPresent(
         endpoint -> {

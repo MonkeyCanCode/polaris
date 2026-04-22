@@ -693,8 +693,9 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
         assertThat(storageAccessConfig.credentials())
             .containsEntry(StorageAccessProperty.AWS_TOKEN.getPropertyName(), "sess")
             .containsEntry(StorageAccessProperty.AWS_KEY_ID.getPropertyName(), "accessKey")
-            .containsEntry(StorageAccessProperty.AWS_SECRET_KEY.getPropertyName(), "secretKey")
-            .doesNotContainKey(StorageAccessProperty.CLIENT_REGION.getPropertyName());
+            .containsEntry(StorageAccessProperty.AWS_SECRET_KEY.getPropertyName(), "secretKey");
+        assertThat(storageAccessConfig.extraProperties())
+            .containsEntry(StorageAccessProperty.CLIENT_REGION.getPropertyName(), "test-region");
         break;
       default:
         throw new IllegalArgumentException("Unknown aws partition: " + awsPartition);
@@ -733,9 +734,9 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
                     POLARIS_PRINCIPAL,
                     Optional.empty(),
                     CredentialVendingContext.empty());
-        assertThat(storageAccessConfig.credentials())
-            .isNotEmpty()
-            .doesNotContainKey(StorageAccessProperty.CLIENT_REGION.getPropertyName());
+        assertThat(storageAccessConfig.credentials()).isNotEmpty();
+        assertThat(storageAccessConfig.extraProperties())
+            .containsEntry(StorageAccessProperty.CLIENT_REGION.getPropertyName(), "dummy-region");
         break;
       case "aws-us-gov":
         Assertions.assertThatThrownBy(
