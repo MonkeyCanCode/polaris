@@ -185,15 +185,6 @@ Indicates whether asterisks ('*') in configuration values defining allowed stora
 
 ---
 
-##### `polaris.features."AWS_EMIT_DEFAULT_REGION_WHEN_MISSING"`
-
-If set to true, a default AWS region will be provided when one is not specified in the storage configuration and credential vending is enabled. The region is resolved via the default AWS region provider chain, with a fallback to 'us-east-1'.
-
-- **Type:** `Boolean`
-- **Default:** `true`
-
----
-
 ##### `polaris.features."AZURE_RETRY_COUNT"`
 
 Number of retry attempts for Azure API requests. Uses exponential backoff with jitter to handle transient failures.
@@ -257,6 +248,15 @@ When enabled, Iceberg tables and views created without a location specified will
 - **Type:** `Boolean`
 - **Default:** `false`
 - **Catalog Config:** `polaris.config.default-table-location-object-storage-prefix.enabled`
+
+---
+
+##### `polaris.features."DEFAULT_S3_CLIENT_REGION"`
+
+Specifies the AWS region to use for the S3 client when none is provided in the storage configuration and credential vending is enabled. This is set to the literal value 'default'.
+
+- **Type:** `String`
+- **Default:** `default`
 
 ---
 

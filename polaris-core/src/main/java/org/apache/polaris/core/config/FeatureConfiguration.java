@@ -576,13 +576,13 @@ public class FeatureConfiguration<T> extends PolarisConfiguration<T> {
           .defaultValue(false)
           .buildFeatureConfiguration();
 
-  public static final FeatureConfiguration<Boolean> AWS_EMIT_DEFAULT_REGION_WHEN_MISSING =
-      PolarisConfiguration.<Boolean>builder()
-          .key("AWS_EMIT_DEFAULT_REGION_WHEN_MISSING")
+  public static final FeatureConfiguration<String> DEFAULT_S3_CLIENT_REGION =
+      PolarisConfiguration.<String>builder()
+          .key("DEFAULT_S3_CLIENT_REGION")
           .description(
-              "If set to true, a default AWS region will be provided when one is not specified"
-                  + " in the storage configuration and credential vending is enabled. The region"
-                  + " is resolved via the default AWS region provider chain, with a fallback to 'us-east-1'.")
-          .defaultValue(true)
+              "Specifies the AWS region to use for the S3 client when none is provided in the "
+                  + "storage configuration and credential vending is enabled. "
+                  + "This is set to the literal value 'default'.")
+          .defaultValue("default")
           .buildFeatureConfiguration();
 }

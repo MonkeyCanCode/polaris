@@ -18,7 +18,7 @@
  */
 package org.apache.polaris.core.storage.aws;
 
-import static org.apache.polaris.core.config.FeatureConfiguration.AWS_EMIT_DEFAULT_REGION_WHEN_MISSING;
+import static org.apache.polaris.core.config.FeatureConfiguration.DEFAULT_S3_CLIENT_REGION;
 import static org.apache.polaris.core.config.FeatureConfiguration.INCLUDE_PRINCIPAL_NAME_IN_SUBSCOPED_CREDENTIAL;
 import static org.apache.polaris.core.config.FeatureConfiguration.SESSION_TAGS_IN_SUBSCOPED_CREDENTIAL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -737,7 +737,9 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
                     CredentialVendingContext.empty());
         assertThat(storageAccessConfig.credentials()).isNotEmpty();
         assertThat(storageAccessConfig.extraProperties())
-            .containsKey(StorageAccessProperty.CLIENT_REGION.getPropertyName());
+            .containsEntry(
+                StorageAccessProperty.CLIENT_REGION.getPropertyName(),
+                DEFAULT_S3_CLIENT_REGION.defaultValue());
         break;
       case "aws-us-gov":
         Assertions.assertThatThrownBy(
@@ -750,12 +752,7 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
                                 .build(),
                             stsClient)
                         .getSubscopedCreds(
-                            new RealmConfigImpl(
-                                (rc, name) ->
-                                    name.equals(AWS_EMIT_DEFAULT_REGION_WHEN_MISSING.key())
-                                        ? false
-                                        : null,
-                                () -> "realm"),
+                            EMPTY_REALM_CONFIG,
                             true, /* allowList = true */
                             Set.of(),
                             Set.of(),
