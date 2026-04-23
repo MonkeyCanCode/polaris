@@ -575,4 +575,14 @@ public class FeatureConfiguration<T> extends PolarisConfiguration<T> {
                   + "configured, but existing values cannot be changed to different ones.")
           .defaultValue(false)
           .buildFeatureConfiguration();
+
+  public static final FeatureConfiguration<Boolean> AWS_EMIT_DEFAULT_REGION_WHEN_MISSING =
+      PolarisConfiguration.<Boolean>builder()
+          .key("AWS_EMIT_DEFAULT_REGION_WHEN_MISSING")
+          .description(
+              "If set to true, a default AWS region will be provided when one is not specified"
+                  + " in the storage configuration and credential vending is enabled. The region"
+                  + " is resolved via the default AWS region provider chain, with a fallback to 'us-east-1'.")
+          .defaultValue(true)
+          .buildFeatureConfiguration();
 }

@@ -492,3 +492,12 @@ Metadata batch size for tasks that clean up dropped tables' files.
 - **Default:** `10`
 
 ---
+
+##### `polaris.features."AWS_EMIT_DEFAULT_REGION_WHEN_MISSING"`
+
+If set to true, a default AWS region will be provided when one is not specified in the storage configuration and credential vending is enabled. The region is resolved via the default AWS region provider chain, with a fallback to 'us-east-1'.
+
+- **Type:** `Boolean`
+- **Default:** `true`
+
+---

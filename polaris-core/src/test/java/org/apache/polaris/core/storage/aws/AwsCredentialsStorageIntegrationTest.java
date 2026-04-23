@@ -18,6 +18,7 @@
  */
 package org.apache.polaris.core.storage.aws;
 
+import static org.apache.polaris.core.config.FeatureConfiguration.AWS_EMIT_DEFAULT_REGION_WHEN_MISSING;
 import static org.apache.polaris.core.config.FeatureConfiguration.INCLUDE_PRINCIPAL_NAME_IN_SUBSCOPED_CREDENTIAL;
 import static org.apache.polaris.core.config.FeatureConfiguration.SESSION_TAGS_IN_SUBSCOPED_CREDENTIAL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -736,7 +737,7 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
                     CredentialVendingContext.empty());
         assertThat(storageAccessConfig.credentials()).isNotEmpty();
         assertThat(storageAccessConfig.extraProperties())
-            .containsEntry(StorageAccessProperty.CLIENT_REGION.getPropertyName(), "dummy-region");
+            .containsKey(StorageAccessProperty.CLIENT_REGION.getPropertyName());
         break;
       case "aws-us-gov":
         Assertions.assertThatThrownBy(
@@ -749,7 +750,12 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
                                 .build(),
                             stsClient)
                         .getSubscopedCreds(
-                            EMPTY_REALM_CONFIG,
+                            new RealmConfigImpl(
+                                (rc, name) ->
+                                    name.equals(AWS_EMIT_DEFAULT_REGION_WHEN_MISSING.key())
+                                        ? false
+                                        : null,
+                                () -> "realm"),
                             true, /* allowList = true */
                             Set.of(),
                             Set.of(),

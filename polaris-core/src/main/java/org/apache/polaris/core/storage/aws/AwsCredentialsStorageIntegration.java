@@ -18,6 +18,7 @@
  */
 package org.apache.polaris.core.storage.aws;
 
+import static org.apache.polaris.core.config.FeatureConfiguration.AWS_EMIT_DEFAULT_REGION_WHEN_MISSING;
 import static org.apache.polaris.core.config.FeatureConfiguration.STORAGE_CREDENTIAL_DURATION_SECONDS;
 import static org.apache.polaris.core.storage.aws.AwsSessionTagsBuilder.buildSessionTags;
 
@@ -48,6 +49,7 @@ import software.amazon.awssdk.policybuilder.iam.IamEffect;
 import software.amazon.awssdk.policybuilder.iam.IamPolicy;
 import software.amazon.awssdk.policybuilder.iam.IamResource;
 import software.amazon.awssdk.policybuilder.iam.IamStatement;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
@@ -95,7 +97,14 @@ public class AwsCredentialsStorageIntegration
         realmConfig.getConfig(STORAGE_CREDENTIAL_DURATION_SECONDS);
     AwsStorageConfigurationInfo storageConfig = config();
     String region = storageConfig.getRegion();
-    String regionToUse = region != null ? region : "dummy-region";
+    String regionToUse = region;
+    if (regionToUse == null && realmConfig.getConfig(AWS_EMIT_DEFAULT_REGION_WHEN_MISSING)) {
+      try {
+        regionToUse = new DefaultAwsRegionProviderChain().getRegion().id();
+      } catch (Exception e) {
+        regionToUse = "us-east-1";
+      }
+    }
     StorageAccessConfig.Builder accessConfig = StorageAccessConfig.builder();
 
     boolean includePrincipalNameInSubscopedCredential =
@@ -125,7 +134,7 @@ public class AwsCredentialsStorageIntegration
                           allowListOperation,
                           allowedReadLocations,
                           allowedWriteLocations,
-                          regionToUse)
+                          region)
                       .toJson())
               .durationSeconds(storageCredentialDurationSeconds);
 
@@ -169,7 +178,9 @@ public class AwsCredentialsStorageIntegration
               });
     }
 
-    accessConfig.put(StorageAccessProperty.CLIENT_REGION, regionToUse);
+    if (regionToUse != null) {
+      accessConfig.put(StorageAccessProperty.CLIENT_REGION, regionToUse);
+    }
 
     refreshCredentialsEndpoint.ifPresent(
         endpoint -> {
@@ -315,7 +326,7 @@ public class AwsCredentialsStorageIntegration
 
     boolean hasCurrentKey = kmsKeyArn != null;
     boolean hasAllowedKeys = hasAllowedKmsKeys(allowedKmsKeys);
-    boolean isAwsS3 = region != null && accountId != null && !"dummy-region".equals(region);
+    boolean isAwsS3 = region != null && accountId != null;
 
     // Nothing to do if no keys are configured and not AWS S3
     if (!hasCurrentKey && !hasAllowedKeys && !isAwsS3) {
