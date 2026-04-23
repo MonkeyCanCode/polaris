@@ -316,7 +316,10 @@ public class AwsCredentialsStorageIntegration
 
     boolean hasCurrentKey = kmsKeyArn != null;
     boolean hasAllowedKeys = hasAllowedKmsKeys(allowedKmsKeys);
-    boolean isAwsS3 = region != null && accountId != null && !DEFAULT_S3_CLIENT_REGION.defaultValue().equals(region);
+    boolean isAwsS3 =
+        region != null
+            && accountId != null
+            && !DEFAULT_S3_CLIENT_REGION.defaultValue().equals(region);
 
     // Nothing to do if no keys are configured and not AWS S3
     if (!hasCurrentKey && !hasAllowedKeys && !isAwsS3) {
