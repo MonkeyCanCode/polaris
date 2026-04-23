@@ -69,6 +69,7 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - Added find and tables options to Polaris CLI.
 - Added support for multiple event listeners. Set `polaris.event-listener.types` to a comma-separated list of event listener types to enable multiple event listeners.
 - Added support for enabling only a subset of event types and event categories per event listener. Set `polaris.event-listener.`_`<name>`_`.enabled-event-types` or `polaris.event-listener.`_`<name>`_`.enabled-event-categories` to the list of event types or categories for the specified event listener to only consume the selected subset of events.
+- Added support for **Apache Ranger** as an external authorizer (Beta). 
 
 ### Changes
 
@@ -284,3 +285,4 @@ Apache Polaris 0.9.0 was released on March 11, 2025 as the first Polaris release
 [0.9.0-incubating]: https://github.com/apache/polaris/commits/apache-polaris-0.9.0-incubating
 [Open Policy Agent (OPA)]: https://www.openpolicyagent.org/
 [Iceberg Metrics Reporting]: https://iceberg.apache.org/docs/latest/metrics-reporting/
+[Apache Ranger Authorization]: https://ranger.apache.org/
