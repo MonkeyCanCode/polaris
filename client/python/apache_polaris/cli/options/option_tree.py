@@ -87,8 +87,8 @@ class OptionTree:
     """
 
     _CATALOG_ROLE_AND_CATALOG = [
-        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-        Argument(Arguments.CATALOG_ROLE, str, "The name of a catalog role"),
+        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+        Argument(Arguments.CATALOG_ROLE, str, Hints.CATALOG_ROLE),
     ]
 
     _FEDERATION_ARGS = [
@@ -598,7 +598,7 @@ class OptionTree:
                         Argument(
                             Arguments.PRINCIPAL,
                             str,
-                            "The name of a principal to grant this role to",
+                            Hints.PRINCIPAL,
                         )
                     ],
                     input_name=Arguments.PRINCIPAL_ROLE,
@@ -611,7 +611,7 @@ class OptionTree:
                         Argument(
                             Arguments.PRINCIPAL,
                             str,
-                            "The name of a principal to revoke this role from",
+                            Hints.PRINCIPAL,
                         )
                     ],
                     input_name=Arguments.PRINCIPAL_ROLE,
@@ -639,7 +639,7 @@ class OptionTree:
                         Argument(
                             Arguments.CATALOG,
                             str,
-                            "The name of an existing catalog",
+                            Hints.CATALOG,
                         ),
                         Argument(
                             Arguments.PROPERTY,
@@ -658,7 +658,7 @@ class OptionTree:
                         Argument(
                             Arguments.CATALOG,
                             str,
-                            "The name of an existing catalog",
+                            Hints.CATALOG,
                         ),
                     ],
                     input_name=Arguments.CATALOG_ROLE,
@@ -671,7 +671,7 @@ class OptionTree:
                         Argument(
                             Arguments.CATALOG,
                             str,
-                            "The name of an existing catalog",
+                            Hints.CATALOG,
                         ),
                     ],
                     input_name=Arguments.CATALOG_ROLE,
@@ -684,7 +684,7 @@ class OptionTree:
                         Argument(
                             Arguments.PRINCIPAL_ROLE,
                             str,
-                            "The name of a principal role to filter results",
+                            Hints.PRINCIPAL_ROLE,
                         )
                     ],
                     input_name=Arguments.CATALOG,
@@ -697,7 +697,7 @@ class OptionTree:
                         Argument(
                             Arguments.CATALOG,
                             str,
-                            "The name of an existing catalog",
+                            Hints.CATALOG,
                         ),
                         Argument(
                             Arguments.SET_PROPERTY,
@@ -719,11 +719,11 @@ class OptionTree:
                     Subcommands.GRANT,
                     hint="Grant a catalog role to a principal role",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
                         Argument(
                             Arguments.PRINCIPAL_ROLE,
                             str,
-                            "The name of a principal role",
+                            Hints.PRINCIPAL_ROLE,
                         ),
                     ],
                     input_name=Arguments.CATALOG_ROLE,
@@ -733,11 +733,11 @@ class OptionTree:
                     Subcommands.REVOKE,
                     hint="Revoke a catalog role from a principal role",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
                         Argument(
                             Arguments.PRINCIPAL_ROLE,
                             str,
-                            "The name of a principal role",
+                            Hints.PRINCIPAL_ROLE,
                         ),
                     ],
                     input_name=Arguments.CATALOG_ROLE,
@@ -746,7 +746,7 @@ class OptionTree:
                 Option(
                     Subcommands.SUMMARIZE,
                     hint="Display a summary for a catalog role",
-                    args=[Argument(Arguments.CATALOG, str, "The name of a catalog")],
+                    args=[Argument(Arguments.CATALOG, str, Hints.CATALOG)],
                     input_name=Arguments.CATALOG_ROLE,
                     input_metavar="CATALOG_ROLE_NAME",
                 ),
@@ -802,7 +802,7 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 )
                             ]
                             + OptionTree._CATALOG_ROLE_AND_CATALOG,
@@ -816,7 +816,7 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 ),
                                 Argument(
                                     Arguments.CASCADE,
@@ -841,9 +841,9 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 ),
-                                Argument(Arguments.TABLE, str, "The name of a table"),
+                                Argument(Arguments.TABLE, str, Hints.TABLE),
                             ]
                             + OptionTree._CATALOG_ROLE_AND_CATALOG,
                             input_name=Arguments.PRIVILEGE,
@@ -856,9 +856,9 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 ),
-                                Argument(Arguments.TABLE, str, "The name of a table"),
+                                Argument(Arguments.TABLE, str, Hints.TABLE),
                                 Argument(
                                     Arguments.CASCADE,
                                     bool,
@@ -882,9 +882,9 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 ),
-                                Argument(Arguments.VIEW, str, "The name of a view"),
+                                Argument(Arguments.VIEW, str, Hints.VIEW),
                             ]
                             + OptionTree._CATALOG_ROLE_AND_CATALOG,
                             input_name=Arguments.PRIVILEGE,
@@ -897,9 +897,9 @@ class OptionTree:
                                 Argument(
                                     Arguments.NAMESPACE,
                                     str,
-                                    "A period-delimited namespace",
+                                    Hints.NAMESPACE,
                                 ),
-                                Argument(Arguments.VIEW, str, "The name of a view"),
+                                Argument(Arguments.VIEW, str, Hints.VIEW),
                                 Argument(
                                     Arguments.CASCADE,
                                     bool,
@@ -925,7 +925,7 @@ class OptionTree:
                     Subcommands.CREATE,
                     hint="Create a new namespace",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
                         Argument(
                             Arguments.LOCATION,
                             str,
@@ -945,7 +945,7 @@ class OptionTree:
                     Subcommands.LIST,
                     hint="List namespaces",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
                         Argument(
                             Arguments.PARENT,
                             str,
@@ -956,21 +956,21 @@ class OptionTree:
                 Option(
                     Subcommands.DELETE,
                     hint="Delete a namespace",
-                    args=[Argument(Arguments.CATALOG, str, "The name of a catalog")],
+                    args=[Argument(Arguments.CATALOG, str, Hints.CATALOG)],
                     input_name=Arguments.NAMESPACE,
                     input_metavar="NAMESPACE",
                 ),
                 Option(
                     Subcommands.GET,
                     hint="Retrieve metadata for a namespace",
-                    args=[Argument(Arguments.CATALOG, str, "The name of a catalog")],
+                    args=[Argument(Arguments.CATALOG, str, Hints.CATALOG)],
                     input_name=Arguments.NAMESPACE,
                     input_metavar="NAMESPACE",
                 ),
                 Option(
                     Subcommands.SUMMARIZE,
                     hint="Display a summary for a namespace",
-                    args=[Argument(Arguments.CATALOG, str, "The name of a catalog")],
+                    args=[Argument(Arguments.CATALOG, str, Hints.CATALOG)],
                     input_name=Arguments.NAMESPACE,
                     input_metavar="NAMESPACE",
                 ),
@@ -1021,10 +1021,8 @@ class OptionTree:
                     Subcommands.CREATE,
                     hint="Create a new policy",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.POLICY_FILE,
                             str,
@@ -1048,10 +1046,8 @@ class OptionTree:
                     Subcommands.DELETE,
                     hint="Delete a policy",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.DETACH_ALL,
                             bool,
@@ -1065,10 +1061,8 @@ class OptionTree:
                     Subcommands.GET,
                     hint="Retrieve metadata for a policy",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                     ],
                     input_name=Arguments.POLICY,
                     input_metavar="POLICY_NAME",
@@ -1077,10 +1071,8 @@ class OptionTree:
                     Subcommands.LIST,
                     hint="List policies",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.TARGET_NAME,
                             str,
@@ -1102,10 +1094,8 @@ class OptionTree:
                     Subcommands.UPDATE,
                     hint="Update properties of a policy",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.POLICY_FILE,
                             str,
@@ -1124,10 +1114,8 @@ class OptionTree:
                     Subcommands.ATTACH,
                     hint="Attach a policy to an entity",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.ATTACHMENT_TYPE,
                             str,
@@ -1152,10 +1140,8 @@ class OptionTree:
                     Subcommands.DETACH,
                     hint="Detach a policy from an entity",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                         Argument(
                             Arguments.ATTACHMENT_TYPE,
                             str,
@@ -1206,20 +1192,16 @@ class OptionTree:
                     Subcommands.LIST,
                     hint="List tables",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                     ],
                 ),
                 Option(
                     Subcommands.GET,
                     hint="Retrieve metadata for a table",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                     ],
                     input_name=Arguments.TABLE,
                     input_metavar="TABLE_NAME",
@@ -1228,10 +1210,8 @@ class OptionTree:
                     Subcommands.SUMMARIZE,
                     hint="Display a summary for a table",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                     ],
                     input_name=Arguments.TABLE,
                     input_metavar="TABLE_NAME",
@@ -1240,10 +1220,8 @@ class OptionTree:
                     Subcommands.DELETE,
                     hint="De-register a table from catalog",
                     args=[
-                        Argument(Arguments.CATALOG, str, "The name of a catalog"),
-                        Argument(
-                            Arguments.NAMESPACE, str, "A period-delimited namespace"
-                        ),
+                        Argument(Arguments.CATALOG, str, Hints.CATALOG),
+                        Argument(Arguments.NAMESPACE, str, Hints.NAMESPACE),
                     ],
                     input_name=Arguments.TABLE,
                     input_metavar="TABLE_NAME",
@@ -1257,7 +1235,7 @@ class OptionTree:
             Commands.FIND,
             hint="find an identifier",
             args=[
-                Argument(Arguments.CATALOG, str, "The name of a catalog"),
+                Argument(Arguments.CATALOG, str, Hints.CATALOG),
                 Argument(
                     Arguments.TYPE,
                     str,

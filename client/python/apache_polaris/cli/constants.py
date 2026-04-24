@@ -260,6 +260,15 @@ class Hints:
         " this option more than once"
     )
 
+    # Entities Hints
+    CATALOG = "The name of a catalog"
+    CATALOG_ROLE = "The name of a catalog role"
+    PRINCIPAL = "The name of a principal"
+    PRINCIPAL_ROLE = "The name of a principal role"
+    NAMESPACE = "A period-delimited namespace"
+    TABLE = "The name of a table"
+    VIEW = "The name of a view"
+
     # Storage Hints
     ## S3
     S3_ROLE_ARN = "A role ARN to use when connecting to S3"
