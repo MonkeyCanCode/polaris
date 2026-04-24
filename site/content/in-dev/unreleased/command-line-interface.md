@@ -715,7 +715,7 @@ options:
   -h, --help             show this help message and exit
 
 Command Options:
-  --principal PRINCIPAL  The name of a principal to grant this role to
+  --principal PRINCIPAL  The name of a principal
 ```
 
 ##### Examples
@@ -740,7 +740,7 @@ options:
   -h, --help             show this help message and exit
 
 Command Options:
-  --principal PRINCIPAL  The name of a principal to revoke this role from
+  --principal PRINCIPAL  The name of a principal
 ```
 
 ##### Examples
@@ -800,7 +800,7 @@ options:
   -h, --help           show this help message and exit
 
 Command Options:
-  --catalog CATALOG    The name of an existing catalog
+  --catalog CATALOG    The name of a catalog
   --property PROPERTY  A key/value pair such as: tag=value. Multiple can be provided by specifying this option more than once
 ```
 
@@ -826,7 +826,7 @@ options:
   -h, --help         show this help message and exit
 
 Command Options:
-  --catalog CATALOG  The name of an existing catalog
+  --catalog CATALOG  The name of a catalog
 ```
 
 ##### Examples
@@ -851,7 +851,7 @@ options:
   -h, --help         show this help message and exit
 
 Command Options:
-  --catalog CATALOG  The name of an existing catalog
+  --catalog CATALOG  The name of a catalog
 ```
 
 ##### Examples
@@ -876,7 +876,7 @@ options:
   -h, --help                       show this help message and exit
 
 Command Options:
-  --principal-role PRINCIPAL_ROLE  The name of a principal role to filter results
+  --principal-role PRINCIPAL_ROLE  The name of a principal role
 ```
 
 ##### Examples
@@ -901,7 +901,7 @@ options:
   -h, --help                         show this help message and exit
 
 Command Options:
-  --catalog CATALOG                  The name of an existing catalog
+  --catalog CATALOG                  The name of a catalog
   --set-property SET_PROPERTY        A key/value pair such as: tag=value. Merges the specified key/value into an existing properties map by updating the value if the key already exists or creating a new entry if not. Multiple can be provided by specifying this option more than once
   --remove-property REMOVE_PROPERTY  A key to remove from a properties map. If the key already does not exist then no action is taken for the specified key. Multiple can be provided by specifying this option more than once
 ```
@@ -1839,9 +1839,9 @@ polaris catalog-roles grant \
 
 polaris privileges \
   catalog \
+  grant \
   --catalog my_catalog \
   --catalog-role my_catalog_role \
-  grant \
   CATALOG_MANAGE_CONTENT
 ```
 
@@ -1850,12 +1850,12 @@ polaris privileges \
 _Note that some other privileges, such as `CATALOG_MANAGE_CONTENT`, subsume `TABLE_READ_DATA` and would not be discovered here._
 
 ```
-principal_roles=$(polaris principal-roles list --principal my_principal)
+principal_roles=$(polaris principal-roles list --principal readonly_user | jq -r .name)
 for principal_role in ${principal_roles}; do
-  catalog_roles=$(polaris catalog-roles --list --principal-role "${principal_role}")
+  catalog_roles=$(polaris catalog-roles list quickstart_catalog --principal-role ${principal_role} | jq -r .name)
   for catalog_role in ${catalog_roles}; do
-    grants=$(polaris privileges list  --catalog-role "${catalog_role}" --catalog "${catalog}")
-    for grant in $(echo "${grants}" | jq -c '.[] | select(.privilege == "TABLE_READ_DATA")'); do
+    grants=$(polaris privileges list  --catalog-role ${catalog_role} --catalog quickstart_catalog)
+    for grant in $(echo ${grants} | jq -c 'select(.privilege == "TABLE_READ_DATA")'); do
       echo "${grant}"
     done
   done
