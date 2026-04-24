@@ -284,7 +284,8 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
                     catalogAdminRole, effRole, PolarisPrivilege.CATALOG_ROLE_USAGE));
           }
 
-          persistGrantsOrRevokes(true, grants.toArray(SecurableGranteePrivilegeTuple[]::new));
+          persistGrantsOrRevokes(
+              true, false, grants.toArray(SecurableGranteePrivilegeTuple[]::new));
 
           byName.put(nameKey, objRef(catalogObj));
           byId.put(idKey, nameKey);
@@ -1136,23 +1137,42 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
   }
 
   LoadGrantsResult loadGrants(long catalogId, long id, int entityTypeCode, boolean onSecurable) {
+    PolarisEntityType entityType = PolarisEntityType.fromCode(entityTypeCode);
     LOGGER.debug(
         "loadGrants on {} for catalog:{}, id:{}, entityType:{}({})",
         onSecurable ? "securable" : "grantee",
         catalogId,
         id,
-        PolarisEntityType.fromCode(entityTypeCode),
+        entityType,
         entityTypeCode);
+
+    var anchorEntity = lookupEntity(catalogId, id, entityTypeCode);
+    if (anchorEntity == null) {
+      LOGGER.trace(
+          "Anchor entity for loadGrants does not exist, returning ENTITY_NOT_FOUND: catalog:{}, id:{}, entityType:{}({})",
+          catalogId,
+          id,
+          entityType,
+          entityTypeCode);
+      return new LoadGrantsResult(ENTITY_NOT_FOUND, null);
+    }
+
     var aclName = new GrantTriplet(true, catalogId, id, entityTypeCode).toRoleName();
 
     var collector = new GrantRecordsCollector();
     var entities = new ArrayList<PolarisBaseEntity>();
     var ids = new HashSet<Long>();
+    // ACLs for a given entity contain two directional entry flavors:
+    //   - reverse ('r/...'): grants where that entity is the grantee
+    //   - directed ('d/...'): grants where that entity is the securable
+    // Filter by direction so callers receive only the requested perspective.
+    Predicate<GrantTriplet> entryFilter = GrantTriplet::reverseOrKey;
+    entryFilter = onSecurable ? entryFilter.negate() : entryFilter;
 
     collectGrantRecords(
         catalogId,
         aclName,
-        ((securableAndGrantee, granted) -> {
+        (securableAndGrantee, granted) -> {
           var targetCatalogId =
               onSecurable
                   ? securableAndGrantee.granteeCatalogId()
@@ -1163,6 +1183,20 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
               onSecurable
                   ? securableAndGrantee.granteeTypeCode()
                   : securableAndGrantee.securableTypeCode();
+
+          // Skip self-referencing entries where the target is the anchor entity itself.
+          // The bidirectional ACL model produces these when securable == grantee.
+          if (targetId == id && targetTypeCode == entityTypeCode) {
+            if (LOGGER.isTraceEnabled()) {
+              LOGGER.trace(
+                  "    Skipping self-referencing grant entry for catalog:{}, id:{}, entityType:{}({})",
+                  targetCatalogId,
+                  targetId,
+                  PolarisEntityType.fromCode(targetTypeCode),
+                  targetTypeCode);
+            }
+            return;
+          }
 
           var indexedAccess = memoizedIndexedAccess.indexedAccess(targetCatalogId, targetTypeCode);
           var entityOptional =
@@ -1182,17 +1216,19 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
           } else {
             LOGGER.trace("    Not returning stale entity reference");
           }
-        }));
+        },
+        entryFilter);
 
     LOGGER.trace(
         "Returning {} grant records for loadGrants for catalog:{}, id:{}, entityType:{}({})",
         collector.grantRecords.size(),
         catalogId,
         id,
-        PolarisEntityType.fromCode(entityTypeCode),
+        entityType,
         entityTypeCode);
 
-    return new LoadGrantsResult(1, collector.grantRecords, entities);
+    return new LoadGrantsResult(
+        anchorEntity.getGrantRecordsVersion(), collector.grantRecords, entities);
   }
 
   private List<PolarisGrantRecord> collectGrantRecords(
@@ -1225,7 +1261,8 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
 
           collector.handle(securableAndGrantee, granted);
         },
-        securablesIndex);
+        securablesIndex,
+        triplet -> true);
     return collector.grantRecords;
   }
 
@@ -1235,12 +1272,16 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
   }
 
   private void collectGrantRecords(
-      long catalogStableId, String aclName, AclEntryHandler aclEntryConsumer) {
+      long catalogStableId,
+      String aclName,
+      AclEntryHandler aclEntryConsumer,
+      Predicate<GrantTriplet> tripletFilter) {
     LOGGER.debug("Checking ACL '{}'", aclName);
 
     var securablesIndex = memoizedIndexedAccess.grantsIndex();
     if (securablesIndex.isPresent()) {
-      collectGrantRecords(catalogStableId, aclName, aclEntryConsumer, securablesIndex.get());
+      collectGrantRecords(
+          catalogStableId, aclName, aclEntryConsumer, securablesIndex.get(), tripletFilter);
     } else {
       LOGGER.trace("ACL {} does not exist", aclName);
     }
@@ -1250,7 +1291,8 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
       long catalogStableId,
       String aclName,
       AclEntryHandler aclEntryConsumer,
-      Index<ObjRef> securablesIndex) {
+      Index<ObjRef> securablesIndex,
+      Predicate<GrantTriplet> tripletFilter) {
     var securableKey = IndexKey.key(aclName);
 
     LOGGER.trace("Processing existing ACL {}", aclName);
@@ -1263,6 +1305,10 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
               acl.forEach(
                   (role, entry) -> {
                     var triplet = GrantTriplet.fromRoleName(role);
+                    if (!tripletFilter.test(triplet)) {
+                      LOGGER.trace("  Skipping ACL entry role '{}' due to direction filter", role);
+                      return;
+                    }
                     LOGGER
                         .atTrace()
                         .setMessage("  ACL has securable {} ({}) with privileges {}")
@@ -1302,10 +1348,17 @@ class NoSqlMetaStore extends NonFunctionalBasePersistence {
     }
   }
 
-  boolean persistGrantsOrRevokes(boolean doGrant, SecurableGranteePrivilegeTuple... grants) {
+  boolean persistGrantsOrRevokes(
+      boolean doGrant, boolean validateEntityReferences, SecurableGranteePrivilegeTuple... grants) {
     LOGGER.debug("Persisting {} for '{}'", doGrant ? "grants" : "revokes", Arrays.asList(grants));
 
-    return new GrantsMutation(persistence, memoizedIndexedAccess, privileges, doGrant, grants)
+    return new GrantsMutation(
+            persistence,
+            memoizedIndexedAccess,
+            privileges,
+            doGrant,
+            validateEntityReferences,
+            grants)
         .apply();
   }
 

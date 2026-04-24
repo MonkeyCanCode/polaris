@@ -54,7 +54,7 @@ cd ${REGTEST_HOME}
 
 if [ -z "${1}" ]; then
   loginfo 'Running all tests'
-  TEST_LIST="../client/python/test $(find t_* -wholename '*t_*/src/*')"
+  TEST_LIST="../client/python/tests $(find t_* -wholename '*t_*/src/*')"
 else
   loginfo "Running single test ${1}"
   TEST_LIST=${1}
@@ -81,7 +81,10 @@ fi
 # Run MinIO setup if in MinIO mode
 if [ "${MINIO_TEST_ENABLED}" == "true" ]; then
   loginfo "Setting up MinIO for tests"
-  ${REGTEST_HOME}/minio-setup.sh
+  if ! ${REGTEST_HOME}/minio-setup.sh; then
+    logred "MinIO setup failed; aborting regression tests"
+    exit 1
+  fi
   loginfo "MinIO mode enabled"
 else
   loginfo "AWS mode enabled"
@@ -116,7 +119,7 @@ echo "Root bearer token: ${REGTEST_ROOT_BEARER_TOKEN}"
 
 for TEST_FILE in ${TEST_LIST}; do
   # Special-case running all client pytests
-  if [ "${TEST_FILE}" == '../client/python/test' ]; then
+  if [ "${TEST_FILE}" == '../client/python/tests' ]; then
     loginfo "Starting pytest for entire client suite"
     SCRIPT_DIR="$SCRIPT_DIR" python3 -m pytest ${TEST_FILE}
     CODE=$?
