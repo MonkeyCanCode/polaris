@@ -19,6 +19,7 @@
 package org.apache.polaris.core.storage.aws;
 
 import static org.apache.polaris.core.config.FeatureConfiguration.DEFAULT_S3_CLIENT_REGION;
+import static org.apache.polaris.core.config.FeatureConfiguration.EMIT_DEFAULT_S3_CLIENT_REGION;
 import static org.apache.polaris.core.config.FeatureConfiguration.INCLUDE_PRINCIPAL_NAME_IN_SUBSCOPED_CREDENTIAL;
 import static org.apache.polaris.core.config.FeatureConfiguration.SESSION_TAGS_IN_SUBSCOPED_CREDENTIAL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -740,6 +741,28 @@ class AwsCredentialsStorageIntegrationTest extends BaseStorageIntegrationTest {
             .containsEntry(
                 StorageAccessProperty.CLIENT_REGION.getPropertyName(),
                 DEFAULT_S3_CLIENT_REGION.defaultValue());
+        // Tested with EMIT_DEFAULT_S3_CLIENT_REGION disabled
+        storageAccessConfig =
+            new AwsCredentialsStorageIntegration(
+                    AwsStorageConfigurationInfo.builder()
+                        .addAllowedLocation(s3Path(bucket, warehouseKeyPrefix))
+                        .roleARN(roleARN)
+                        .externalId(externalId)
+                        .build(),
+                    stsClient)
+                .getSubscopedCreds(
+                    new RealmConfigImpl(
+                        (rc, name) ->
+                            name.equals(EMIT_DEFAULT_S3_CLIENT_REGION.key()) ? false : null,
+                        () -> "realm"),
+                    true, /* allowList = true */
+                    Set.of(),
+                    Set.of(),
+                    POLARIS_PRINCIPAL,
+                    Optional.empty(),
+                    CredentialVendingContext.empty());
+        assertThat(storageAccessConfig.extraProperties())
+            .doesNotContainKey(StorageAccessProperty.CLIENT_REGION.getPropertyName());
         break;
       case "aws-us-gov":
         Assertions.assertThatThrownBy(

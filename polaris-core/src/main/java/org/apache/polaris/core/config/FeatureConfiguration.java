@@ -576,6 +576,16 @@ public class FeatureConfiguration<T> extends PolarisConfiguration<T> {
           .defaultValue(false)
           .buildFeatureConfiguration();
 
+  public static final FeatureConfiguration<Boolean> EMIT_DEFAULT_S3_CLIENT_REGION =
+      PolarisConfiguration.<Boolean>builder()
+          .key("EMIT_DEFAULT_S3_CLIENT_REGION")
+          .description(
+              "If set to true, emits the default S3 client region value when no region "
+                  + "is provided in the storage configuration and credential vending is enabled. "
+                  + "The client region is specified by DEFAULT_S3_CLIENT_REGION.")
+          .defaultValue(true)
+          .buildFeatureConfiguration();
+
   public static final FeatureConfiguration<String> DEFAULT_S3_CLIENT_REGION =
       PolarisConfiguration.<String>builder()
           .key("DEFAULT_S3_CLIENT_REGION")

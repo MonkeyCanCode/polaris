@@ -270,6 +270,15 @@ If set to true, allows tables to be dropped with the purge parameter set to true
 
 ---
 
+##### `polaris.features."EMIT_DEFAULT_S3_CLIENT_REGION"`
+
+If set to true, emits the default S3 client region value when no region is provided in the storage configuration and credential vending is enabled. The client region is specified by DEFAULT_S3_CLIENT_REGION.
+
+- **Type:** `Boolean`
+- **Default:** `true`
+
+---
+
 ##### `polaris.features."ENABLE_CATALOG_FEDERATION"`
 
 If true, allows creating and using ExternalCatalogs containing ConnectionConfigInfos to perform federation to remote catalogs.

@@ -19,6 +19,7 @@
 package org.apache.polaris.core.storage.aws;
 
 import static org.apache.polaris.core.config.FeatureConfiguration.DEFAULT_S3_CLIENT_REGION;
+import static org.apache.polaris.core.config.FeatureConfiguration.EMIT_DEFAULT_S3_CLIENT_REGION;
 import static org.apache.polaris.core.config.FeatureConfiguration.STORAGE_CREDENTIAL_DURATION_SECONDS;
 import static org.apache.polaris.core.storage.aws.AwsSessionTagsBuilder.buildSessionTags;
 
@@ -96,7 +97,10 @@ public class AwsCredentialsStorageIntegration
         realmConfig.getConfig(STORAGE_CREDENTIAL_DURATION_SECONDS);
     AwsStorageConfigurationInfo storageConfig = config();
     String region = storageConfig.getRegion();
-    String clientRegion = region != null ? region : DEFAULT_S3_CLIENT_REGION.defaultValue();
+    String clientRegion = region;
+    if (clientRegion == null && realmConfig.getConfig(EMIT_DEFAULT_S3_CLIENT_REGION)) {
+      clientRegion = realmConfig.getConfig(DEFAULT_S3_CLIENT_REGION);
+    }
     StorageAccessConfig.Builder accessConfig = StorageAccessConfig.builder();
 
     boolean includePrincipalNameInSubscopedCredential =
@@ -170,7 +174,9 @@ public class AwsCredentialsStorageIntegration
               });
     }
 
-    accessConfig.put(StorageAccessProperty.CLIENT_REGION, clientRegion);
+    if (clientRegion != null) {
+      accessConfig.put(StorageAccessProperty.CLIENT_REGION, clientRegion);
+    }
 
     refreshCredentialsEndpoint.ifPresent(
         endpoint -> {
