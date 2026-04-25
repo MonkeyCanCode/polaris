@@ -130,7 +130,7 @@ public class AwsCredentialsStorageIntegration
                           allowListOperation,
                           allowedReadLocations,
                           allowedWriteLocations,
-                          clientRegion)
+                          region)
                       .toJson())
               .durationSeconds(storageCredentialDurationSeconds);
 
@@ -155,8 +155,7 @@ public class AwsCredentialsStorageIntegration
       @SuppressWarnings("resource")
       // Note: stsClientProvider returns "thin" clients that do not need closing
       StsClient stsClient =
-          stsClientProvider.stsClient(
-              StsDestination.of(storageConfig.getStsEndpointUri(), clientRegion));
+          stsClientProvider.stsClient(StsDestination.of(storageConfig.getStsEndpointUri(), region));
 
       AssumeRoleResponse response = stsClient.assumeRole(request.build());
       accessConfig.put(StorageAccessProperty.AWS_KEY_ID, response.credentials().accessKeyId());
@@ -322,10 +321,7 @@ public class AwsCredentialsStorageIntegration
 
     boolean hasCurrentKey = kmsKeyArn != null;
     boolean hasAllowedKeys = hasAllowedKmsKeys(allowedKmsKeys);
-    boolean isAwsS3 =
-        region != null
-            && accountId != null
-            && !DEFAULT_S3_CLIENT_REGION.defaultValue().equals(region);
+    boolean isAwsS3 = region != null && accountId != null;
 
     // Nothing to do if no keys are configured and not AWS S3
     if (!hasCurrentKey && !hasAllowedKeys && !isAwsS3) {
