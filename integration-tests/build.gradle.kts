@@ -82,6 +82,7 @@ dependencies {
   implementation(project(":polaris-runtime-test-common"))
   implementation(project(":polaris-minio-testcontainer"))
   implementation(project(":polaris-rustfs-testcontainer"))
+  implementation(project(":polaris-hms-testcontainer"))
 }
 
 copiedCodeChecks {

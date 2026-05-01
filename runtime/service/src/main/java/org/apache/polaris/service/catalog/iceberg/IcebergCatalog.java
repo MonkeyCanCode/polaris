@@ -990,35 +990,12 @@ public class IcebergCatalog extends BaseMetastoreViewCatalog
   }
 
   /**
-   * Applies the rule controlled by REPLACE_NEW_LOCATION_PREFIX_WITH_CATALOG_DEFAULT_KEY to a
-   * tablelike location
-   */
-  private String applyReplaceNewLocationWithCatalogDefault(String specifiedTableLikeLocation) {
-    String replaceNewLocationPrefix = catalogEntity.getReplaceNewLocationPrefixWithCatalogDefault();
-    if (specifiedTableLikeLocation != null
-        && replaceNewLocationPrefix != null
-        && specifiedTableLikeLocation.startsWith(replaceNewLocationPrefix)) {
-      String modifiedLocation =
-          defaultBaseLocation
-              + specifiedTableLikeLocation.substring(replaceNewLocationPrefix.length());
-      LOGGER
-          .atDebug()
-          .addKeyValue("specifiedTableLikeLocation", specifiedTableLikeLocation)
-          .addKeyValue("modifiedLocation", modifiedLocation)
-          .log("Translating specifiedTableLikeLocation based on config");
-      return modifiedLocation;
-    }
-    return specifiedTableLikeLocation;
-  }
-
-  /**
    * Based on configuration settings, for callsites that need to handle potentially setting a new
    * base location for a TableLike entity, produces the transformed location if applicable, or else
    * the unaltered specified location.
    */
   public String transformTableLikeLocation(TableIdentifier tableIdentifier, String location) {
-    return applyDefaultLocationObjectStoragePrefix(
-        tableIdentifier, applyReplaceNewLocationWithCatalogDefault(location));
+    return applyDefaultLocationObjectStoragePrefix(tableIdentifier, location);
   }
 
   /**
@@ -1468,13 +1445,15 @@ public class IcebergCatalog extends BaseMetastoreViewCatalog
       if (latestLocation == null) {
         disableRefresh();
       } else {
-        polarisEventDispatcher.dispatch(
-            new PolarisEvent(
-                PolarisEventType.BEFORE_REFRESH_TABLE,
-                eventMetadataFactory.create(),
-                new EventAttributeMap()
-                    .put(EventAttributes.CATALOG_NAME, catalogName)
-                    .put(EventAttributes.TABLE_IDENTIFIER, tableIdentifier)));
+        if (polarisEventDispatcher.hasListeners(PolarisEventType.BEFORE_REFRESH_TABLE)) {
+          polarisEventDispatcher.dispatch(
+              new PolarisEvent(
+                  PolarisEventType.BEFORE_REFRESH_TABLE,
+                  eventMetadataFactory.create(),
+                  new EventAttributeMap()
+                      .put(EventAttributes.CATALOG_NAME, catalogName)
+                      .put(EventAttributes.TABLE_IDENTIFIER, tableIdentifier)));
+        }
         refreshFromMetadataLocation(
             latestLocation,
             SHOULD_RETRY_REFRESH_PREDICATE,
@@ -1494,13 +1473,15 @@ public class IcebergCatalog extends BaseMetastoreViewCatalog
                       Set.of(PolarisStorageActions.READ, PolarisStorageActions.LIST));
               return TableMetadataParser.read(fileIO, metadataLocation);
             });
-        polarisEventDispatcher.dispatch(
-            new PolarisEvent(
-                PolarisEventType.AFTER_REFRESH_TABLE,
-                eventMetadataFactory.create(),
-                new EventAttributeMap()
-                    .put(EventAttributes.CATALOG_NAME, catalogName)
-                    .put(EventAttributes.TABLE_IDENTIFIER, tableIdentifier)));
+        if (polarisEventDispatcher.hasListeners(PolarisEventType.AFTER_REFRESH_TABLE)) {
+          polarisEventDispatcher.dispatch(
+              new PolarisEvent(
+                  PolarisEventType.AFTER_REFRESH_TABLE,
+                  eventMetadataFactory.create(),
+                  new EventAttributeMap()
+                      .put(EventAttributes.CATALOG_NAME, catalogName)
+                      .put(EventAttributes.TABLE_IDENTIFIER, tableIdentifier)));
+        }
       }
     }
 
@@ -1891,13 +1872,15 @@ public class IcebergCatalog extends BaseMetastoreViewCatalog
       if (latestLocation == null) {
         disableRefresh();
       } else {
-        polarisEventDispatcher.dispatch(
-            new PolarisEvent(
-                PolarisEventType.BEFORE_REFRESH_VIEW,
-                eventMetadataFactory.create(),
-                new EventAttributeMap()
-                    .put(EventAttributes.CATALOG_NAME, catalogName)
-                    .put(EventAttributes.VIEW_IDENTIFIER, identifier)));
+        if (polarisEventDispatcher.hasListeners(PolarisEventType.BEFORE_REFRESH_VIEW)) {
+          polarisEventDispatcher.dispatch(
+              new PolarisEvent(
+                  PolarisEventType.BEFORE_REFRESH_VIEW,
+                  eventMetadataFactory.create(),
+                  new EventAttributeMap()
+                      .put(EventAttributes.CATALOG_NAME, catalogName)
+                      .put(EventAttributes.VIEW_IDENTIFIER, identifier)));
+        }
         refreshFromMetadataLocation(
             latestLocation,
             SHOULD_RETRY_REFRESH_PREDICATE,
@@ -1919,13 +1902,15 @@ public class IcebergCatalog extends BaseMetastoreViewCatalog
 
               return ViewMetadataParser.read(fileIO.newInputFile(metadataLocation));
             });
-        polarisEventDispatcher.dispatch(
-            new PolarisEvent(
-                PolarisEventType.AFTER_REFRESH_VIEW,
-                eventMetadataFactory.create(),
-                new EventAttributeMap()
-                    .put(EventAttributes.CATALOG_NAME, catalogName)
-                    .put(EventAttributes.VIEW_IDENTIFIER, identifier)));
+        if (polarisEventDispatcher.hasListeners(PolarisEventType.AFTER_REFRESH_VIEW)) {
+          polarisEventDispatcher.dispatch(
+              new PolarisEvent(
+                  PolarisEventType.AFTER_REFRESH_VIEW,
+                  eventMetadataFactory.create(),
+                  new EventAttributeMap()
+                      .put(EventAttributes.CATALOG_NAME, catalogName)
+                      .put(EventAttributes.VIEW_IDENTIFIER, identifier)));
+        }
       }
     }
 

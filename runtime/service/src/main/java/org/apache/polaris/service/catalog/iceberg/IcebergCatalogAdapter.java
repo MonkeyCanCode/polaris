@@ -18,7 +18,6 @@
  */
 package org.apache.polaris.service.catalog.iceberg;
 
-import static org.apache.polaris.service.catalog.common.CatalogUtils.decodeNamespace;
 import static org.apache.polaris.service.catalog.validation.IcebergPropertiesValidation.validateIcebergProperties;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -34,7 +33,6 @@ import org.apache.iceberg.MetadataUpdate;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.BadRequestException;
-import org.apache.iceberg.rest.RESTUtil;
 import org.apache.iceberg.rest.requests.CommitTransactionRequest;
 import org.apache.iceberg.rest.requests.CreateNamespaceRequest;
 import org.apache.iceberg.rest.requests.CreateTableRequest;
@@ -50,13 +48,14 @@ import org.apache.polaris.core.auth.PolarisPrincipal;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
+import org.apache.polaris.core.rest.NamespaceUtils;
 import org.apache.polaris.core.rest.PolarisResourcePaths;
 import org.apache.polaris.service.catalog.AccessDelegationMode;
 import org.apache.polaris.service.catalog.CatalogPrefixParser;
 import org.apache.polaris.service.catalog.api.IcebergRestCatalogApiService;
 import org.apache.polaris.service.catalog.api.IcebergRestConfigurationApiService;
 import org.apache.polaris.service.catalog.common.CatalogAdapter;
-import org.apache.polaris.service.catalog.common.CatalogUtils;
+import org.apache.polaris.service.catalog.validation.EntityNameValidator;
 import org.apache.polaris.service.config.ReservedProperties;
 import org.apache.polaris.service.http.IcebergHttpUtil;
 import org.apache.polaris.service.http.IfNoneMatch;
@@ -133,6 +132,7 @@ public class IcebergCatalogAdapter
       RealmContext realmContext,
       SecurityContext securityContext) {
     validateIcebergProperties(realmConfig, createNamespaceRequest.properties());
+    EntityNameValidator.validateNamespace(createNamespaceRequest.namespace());
     return withCatalog(
         securityContext,
         prefix,
@@ -148,7 +148,11 @@ public class IcebergCatalogAdapter
       RealmContext realmContext,
       SecurityContext securityContext) {
     Optional<Namespace> namespaceOptional =
-        Optional.ofNullable(parent).map(CatalogUtils::decodeNamespace);
+        Optional.ofNullable(parent)
+            .map(
+                namespace ->
+                    NamespaceUtils.splitNamespace(
+                        namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR));
     return withCatalog(
         securityContext,
         prefix,
@@ -162,7 +166,8 @@ public class IcebergCatalogAdapter
   @Override
   public Response loadNamespaceMetadata(
       String prefix, String namespace, RealmContext realmContext, SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     return withCatalog(
         securityContext, prefix, catalog -> Response.ok(catalog.loadNamespaceMetadata(ns)).build());
   }
@@ -195,7 +200,8 @@ public class IcebergCatalogAdapter
   @Override
   public Response namespaceExists(
       String prefix, String namespace, RealmContext realmContext, SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     return withCatalog(
         securityContext,
         prefix,
@@ -208,7 +214,8 @@ public class IcebergCatalogAdapter
   @Override
   public Response dropNamespace(
       String prefix, String namespace, RealmContext realmContext, SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     return withCatalog(
         securityContext,
         prefix,
@@ -226,7 +233,8 @@ public class IcebergCatalogAdapter
       RealmContext realmContext,
       SecurityContext securityContext) {
     validateIcebergProperties(realmConfig, updateNamespacePropertiesRequest.updates());
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     UpdateNamespacePropertiesRequest revisedRequest =
         UpdateNamespacePropertiesRequest.builder()
             .removeAll(
@@ -259,7 +267,9 @@ public class IcebergCatalogAdapter
     validateIcebergProperties(realmConfig, createTableRequest.properties());
     EnumSet<AccessDelegationMode> delegationModes =
         parseAccessDelegationModes(accessDelegationMode);
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    EntityNameValidator.validateIdentifier(TableIdentifier.of(ns, createTableRequest.name()));
     return withCatalog(
         securityContext,
         prefix,
@@ -293,7 +303,8 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     return withCatalog(
         securityContext,
         prefix,
@@ -312,8 +323,9 @@ public class IcebergCatalogAdapter
       SecurityContext securityContext) {
     EnumSet<AccessDelegationMode> delegationModes =
         parseAccessDelegationModes(accessDelegationMode);
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
 
     IfNoneMatch ifNoneMatch = IfNoneMatch.fromHeader(ifNoneMatchString);
 
@@ -358,8 +370,9 @@ public class IcebergCatalogAdapter
       String table,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     return withCatalog(
         securityContext,
         prefix,
@@ -377,8 +390,9 @@ public class IcebergCatalogAdapter
       Boolean purgeRequested,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     return withCatalog(
         securityContext,
         prefix,
@@ -399,7 +413,9 @@ public class IcebergCatalogAdapter
       RegisterTableRequest registerTableRequest,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    EntityNameValidator.validateIdentifier(TableIdentifier.of(ns, registerTableRequest.name()));
     return withCatalog(
         securityContext,
         prefix,
@@ -417,6 +433,7 @@ public class IcebergCatalogAdapter
       RenameTableRequest renameTableRequest,
       RealmContext realmContext,
       SecurityContext securityContext) {
+    EntityNameValidator.validateIdentifier(renameTableRequest.destination());
     return withCatalog(
         securityContext,
         prefix,
@@ -446,8 +463,9 @@ public class IcebergCatalogAdapter
             commitTableRequest.updates().stream()
                 .map(reservedProperties::removeReservedProperties)
                 .toList());
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     return withCatalog(
         securityContext,
         prefix,
@@ -474,7 +492,9 @@ public class IcebergCatalogAdapter
         ImmutableCreateViewRequest.copyOf(createViewRequest)
             .withProperties(
                 reservedProperties.removeReservedProperties(createViewRequest.properties()));
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    EntityNameValidator.validateIdentifier(TableIdentifier.of(ns, revisedRequest.name()));
     return withCatalog(
         securityContext,
         prefix,
@@ -489,7 +509,8 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
     return withCatalog(
         securityContext,
         prefix,
@@ -503,8 +524,9 @@ public class IcebergCatalogAdapter
       String table,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     Optional<String> refreshEndpoint =
         Optional.of(new PolarisResourcePaths(prefix).credentialsPath(tableIdentifier));
     return withCatalog(
@@ -520,8 +542,9 @@ public class IcebergCatalogAdapter
       String view,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(view));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, view);
     return withCatalog(
         securityContext, prefix, catalog -> Response.ok(catalog.loadView(tableIdentifier)).build());
   }
@@ -533,8 +556,9 @@ public class IcebergCatalogAdapter
       String view,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(view));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, view);
     return withCatalog(
         securityContext,
         prefix,
@@ -551,8 +575,9 @@ public class IcebergCatalogAdapter
       String view,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(view));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, view);
     return withCatalog(
         securityContext,
         prefix,
@@ -568,6 +593,7 @@ public class IcebergCatalogAdapter
       RenameTableRequest renameTableRequest,
       RealmContext realmContext,
       SecurityContext securityContext) {
+    EntityNameValidator.validateIdentifier(renameTableRequest.destination());
     return withCatalog(
         securityContext,
         prefix,
@@ -592,8 +618,9 @@ public class IcebergCatalogAdapter
             commitViewRequest.updates().stream()
                 .map(reservedProperties::removeReservedProperties)
                 .toList());
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(view));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, view);
     return withCatalog(
         securityContext,
         prefix,
@@ -642,8 +669,9 @@ public class IcebergCatalogAdapter
       ReportMetricsRequest reportMetricsRequest,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     return withCatalog(
         securityContext,
         prefix,
@@ -661,8 +689,9 @@ public class IcebergCatalogAdapter
       NotificationRequest notificationRequest,
       RealmContext realmContext,
       SecurityContext securityContext) {
-    Namespace ns = decodeNamespace(namespace);
-    TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
+    Namespace ns =
+        NamespaceUtils.splitNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+    TableIdentifier tableIdentifier = TableIdentifier.of(ns, table);
     return withCatalog(
         securityContext,
         prefix,
