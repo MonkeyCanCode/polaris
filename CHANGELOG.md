@@ -54,6 +54,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - Added `REGISTER_TABLE_OVERWRITE` authorization operation mapped to `TABLE_FULL_METADATA` for deterministic overwrite authorization.
 - Added Polaris Spark 4.0 client.
 - Added `maintenance` support in Helm chart.
+- Python CLI: added `--catalog-url` to specify a custom base URL for the Iceberg REST Catalog (IRC) API. Allows use with deployments that map a path (e.g. `/server1`) directly to the catalog root instead of the standard `/api/catalog`. See #4927.
+
 - Added support for publishing histogram buckets for HTTP server request duration as configured SLO boundaries.
 - Added an OpenTelemetry event listener for emitting Polaris audit events as OpenTelemetry log records.
 - Added optional `sessionPolicy` field to `SigV4AuthenticationParameters` for catalog federation. When set, the IAM session policy JSON is attached to the STS AssumeRole request, allowing administrators to restrict vended credentials to only the required AWS services and actions (Principle of Least Privilege).
