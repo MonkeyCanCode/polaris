@@ -69,6 +69,10 @@ dependencies {
 
   compileOnly(project(":polaris-immutables"))
   annotationProcessor(project(":polaris-immutables", configuration = "processor"))
+
+  testImplementation(platform(libs.junit.bom))
+  testImplementation("org.junit.jupiter:junit-jupiter")
+  testImplementation(libs.assertj.core)
 }
 
 val rootDir = rootProject.layout.projectDirectory
