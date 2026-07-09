@@ -1225,15 +1225,10 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     final String anotherTableLocation =
         String.format("s3://my-bucket/path/to/data/another_table_%s/", tableSuffix);
 
-    metaStoreManager.updateEntityPropertiesIfNotChanged(
-        polarisContext,
-        List.of(PolarisEntity.toCore(catalogEntity)),
-        new CatalogEntity.Builder(CatalogEntity.of(catalogEntity))
-            .addProperty(
-                FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false")
-            .addProperty(
-                FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true")
-            .build());
+    updateCatalogProperties(
+        Map.of(
+            FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false",
+            FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true"));
     LocalIcebergCatalog catalog = catalog();
     TableMetadata tableMetadata =
         TableMetadata.buildFromEmpty()
@@ -1285,15 +1280,10 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     final String anotherTableLocation =
         String.format("s3://my-bucket/path/to/data/another_table_%s", tableSuffix);
 
-    metaStoreManager.updateEntityPropertiesIfNotChanged(
-        polarisContext,
-        List.of(PolarisEntity.toCore(catalogEntity)),
-        new CatalogEntity.Builder(CatalogEntity.of(catalogEntity))
-            .addProperty(
-                FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false")
-            .addProperty(
-                FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true")
-            .build());
+    updateCatalogProperties(
+        Map.of(
+            FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false",
+            FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true"));
     LocalIcebergCatalog catalog = catalog();
     TableMetadata tableMetadata =
         TableMetadata.buildFromEmpty()
@@ -1342,15 +1332,10 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     final String anotherTableLocation =
         String.format("s3://my-bucket/path/to/data/another_table_%s/", tableSuffix);
 
-    metaStoreManager.updateEntityPropertiesIfNotChanged(
-        polarisContext,
-        List.of(PolarisEntity.toCore(catalogEntity)),
-        new CatalogEntity.Builder(CatalogEntity.of(catalogEntity))
-            .addProperty(
-                FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false")
-            .addProperty(
-                FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true")
-            .build());
+    updateCatalogProperties(
+        Map.of(
+            FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false",
+            FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true"));
     LocalIcebergCatalog catalog = catalog();
 
     fileIO.addFile(
@@ -3005,7 +2990,8 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     updateCatalogProperties(
         Map.of(
             FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "false",
-            FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true"));
+            FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true",
+            FeatureConfiguration.ALLOW_EXTERNAL_METADATA_FILE_LOCATION.catalogConfig(), "true"));
 
     catalog.createNamespace(NS);
     Table table = catalog.buildTable(TABLE, SCHEMA).create();
@@ -3028,6 +3014,26 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     Assertions.assertThat(inMemoryFilesUnderPrefix(metadataPrefix)).contains(metadataFileLocation);
     Assertions.assertThat(updatedTable.properties())
         .containsEntry(TableProperties.WRITE_METADATA_LOCATION, metadataDirectory);
+
+    // Out-of-table metadata location — allowed because catalog-level
+    // ALLOW_EXTERNAL_METADATA_FILE_LOCATION is true
+    String externalMetadataDir =
+        "%s/table-metadata/%s"
+            .formatted(LocationUtil.stripTrailingSlash(STORAGE_LOCATION), UUID.randomUUID());
+    String externalPrefix = externalMetadataDir + "/";
+    updatedTable
+        .updateProperties()
+        .set(TableProperties.WRITE_METADATA_LOCATION, externalMetadataDir)
+        .commit();
+
+    Table reloaded = catalog.loadTable(TABLE);
+    String externalMetadataFile =
+        ((BaseTable) reloaded).operations().current().metadataFileLocation();
+
+    Assertions.assertThat(externalMetadataFile).startsWith(externalPrefix);
+    Assertions.assertThat(fileIO.fileExists(externalMetadataFile)).isTrue();
+    Assertions.assertThat(reloaded.properties())
+        .containsEntry(TableProperties.WRITE_METADATA_LOCATION, externalMetadataDir);
   }
 
   private void validatePropertiesUpdated(
@@ -3058,6 +3064,7 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
 
     Assertions.assertThat(result).returns(true, EntityResult::isSuccess);
     catalogEntity = PolarisEntity.of(result.getEntity());
+    this.catalog = initCatalog("my-catalog", ImmutableMap.of());
   }
 
   @SuppressWarnings("unchecked")
