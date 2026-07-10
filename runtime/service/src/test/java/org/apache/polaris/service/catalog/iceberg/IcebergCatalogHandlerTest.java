@@ -83,6 +83,8 @@ import org.apache.polaris.service.catalog.CatalogPrefixParser;
 import org.apache.polaris.service.catalog.io.StorageAccessConfigProvider;
 import org.apache.polaris.service.config.ReservedProperties;
 import org.apache.polaris.service.events.EventAttributeMap;
+import org.apache.polaris.service.idempotency.IdempotencyConfiguration;
+import org.apache.polaris.service.idempotency.IdempotencyRequestContext;
 import org.apache.polaris.service.reporting.PolarisMetricsReporter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -144,6 +146,11 @@ class IcebergCatalogHandlerTest {
     when(resolutionManifest.getResolvedCatalogEntity()).thenReturn(catalogEntity);
     when(catalogEntity.getConnectionConfigInfoDpo()).thenReturn(null);
 
+    IdempotencyConfiguration idempotencyConfiguration = mock(IdempotencyConfiguration.class);
+    when(idempotencyConfiguration.enabled()).thenReturn(false);
+    IdempotencyRequestContext idempotencyRequestContext =
+        new IdempotencyRequestContext(idempotencyConfiguration);
+
     return ImmutableIcebergCatalogHandler.builder()
         .catalogName(CATALOG_NAME)
         .polarisPrincipal(PolarisPrincipal.of("test", Map.of(), Set.of()))
@@ -164,6 +171,7 @@ class IcebergCatalogHandlerTest {
         .metricsReporter(mock(PolarisMetricsReporter.class))
         .clock(mock(Clock.class))
         .accessDelegationModeResolver(accessDelegationModeResolver)
+        .idempotencyRequestContext(idempotencyRequestContext)
         .build();
   }
 
