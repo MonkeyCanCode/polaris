@@ -62,6 +62,12 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - Added optional `sessionPolicy` field to `SigV4AuthenticationParameters` for catalog federation. When set, the IAM session policy JSON is attached to the STS AssumeRole request, allowing administrators to restrict vended credentials to only the required AWS services and actions (Principle of Least Privilege).
 
 ### Changes
+- The admin tool's `bootstrap` command is now idempotent: bootstrapping a realm that is already
+  bootstrapped is reported as "Realm '<realm>' is already bootstrapped; skipping." and no longer
+  fails the command, making automated bootstrap jobs safe to re-run. Correspondingly,
+  `PolarisMetaStoreManager.bootstrapPolarisService` now returns a result with
+  `ReturnStatus.ENTITY_ALREADY_EXISTS` instead of throwing `IllegalArgumentException` when the
+  root principal already exists. Existing credentials are never returned or altered.
 - Added REPL support to Polaris CLI.
 - The `nosql maintenance-run` admin command now rejects a new run when the latest recorded maintenance run is still unfinished, unless the operator explicitly passes `--supersede-run=<run-id>`.
 - Added version option to Polaris CLI.
