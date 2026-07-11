@@ -82,6 +82,7 @@ class TestProfilesCommand(CLITestBase):
             "s3cr3t",
             "localhost",
             8181,
+            "https",
             "",
             "Polaris-Realm",
         ]
@@ -91,6 +92,8 @@ class TestProfilesCommand(CLITestBase):
             self.assertIn("Polaris profile dev created successfully.", output)
         mock_input.assert_any_call("Polaris Client Secret: ")
         mock_save_profiles.assert_called_once()
+        saved = mock_save_profiles.call_args[0][0]["dev"]
+        self.assertEqual(saved["scheme"], "https")
 
     @patch(
         "apache_polaris.cli.command.profiles.load_profiles",
@@ -157,6 +160,7 @@ class TestProfilesCommand(CLITestBase):
             "new-secret",
             "newhost",
             9090,
+            "https",
             "myrealm",
             "Polaris-Realm",
         ]
@@ -168,6 +172,8 @@ class TestProfilesCommand(CLITestBase):
             "Enter Polaris Client Secret (empty to reuse previous value): "
         )
         mock_save_profiles.assert_called_once()
+        saved = mock_save_profiles.call_args[0][0]["dev"]
+        self.assertEqual(saved["scheme"], "https")
 
     @patch(
         "apache_polaris.cli.command.profiles.load_profiles",
