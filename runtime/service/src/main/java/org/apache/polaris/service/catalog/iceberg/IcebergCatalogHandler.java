@@ -18,6 +18,7 @@
  */
 package org.apache.polaris.service.catalog.iceberg;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.polaris.core.config.FeatureConfiguration.ALLOW_FEDERATED_CATALOGS_CREDENTIAL_VENDING;
 import static org.apache.polaris.core.config.FeatureConfiguration.LIST_PAGINATION_ENABLED;
 import static org.apache.polaris.service.catalog.AccessDelegationMode.VENDED_CREDENTIALS;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.iceberg.BaseMetadataTable;
 import org.apache.iceberg.BaseTable;
@@ -127,6 +129,8 @@ import org.apache.polaris.service.events.EventAttributeMap;
 import org.apache.polaris.service.events.EventAttributes;
 import org.apache.polaris.service.http.IcebergHttpUtil;
 import org.apache.polaris.service.http.IfNoneMatch;
+import org.apache.polaris.service.idempotency.EntityIdempotency;
+import org.apache.polaris.service.idempotency.IdempotencyRequestContext;
 import org.apache.polaris.service.reporting.PolarisMetricsReporter;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.jspecify.annotations.NonNull;
@@ -179,6 +183,8 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
   protected abstract Clock clock();
 
   protected abstract AccessDelegationModeResolver accessDelegationModeResolver();
+
+  protected abstract IdempotencyRequestContext idempotencyRequestContext();
 
   // Catalog instance will be initialized after authorizing resolver successfully resolves
   // the catalog entity.
@@ -410,6 +416,14 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     }
   }
 
+  /**
+   * {@code createTableDirect} with entity-property idempotency support. When idempotency is active
+   * for the request ({@link IdempotencyRequestContext#isActive()}), the key is embedded into the
+   * new table entity's internal properties within the same transaction as the create (expiry comes
+   * from {@code IdempotencyRequestContext}). A subsequent retry that arrives while the key is still
+   * live replays the original success (rebuilding the load response from current catalog state)
+   * instead of returning a 409 conflict.
+   */
   public LoadTableResponse createTableDirect(
       Namespace namespace,
       CreateTableRequest request,
@@ -420,6 +434,35 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     Optional<AccessDelegationMode> resolvedMode = resolveAccessDelegationModes(delegationModes);
 
     TableIdentifier tableIdentifier = TableIdentifier.of(namespace, request.name());
+
+    // Idempotency replay: on a retry the table already exists and carries the key in its internal
+    // properties (committed atomically with the original create). Rebuild the load response from
+    // current catalog state rather than failing with AlreadyExists.
+    if (idempotencyRequestContext().isActive()) {
+      UUID idempotencyKey = requireNonNull(idempotencyRequestContext().pendingKey());
+      IcebergTableLikeEntity existing =
+          passthroughResolveTableEntityForIdempotency(tableIdentifier);
+      if (existing != null
+          && EntityIdempotency.hasLiveKey(
+              existing.getInternalPropertiesAsMap(), idempotencyKey, clock().instant())) {
+        Table table = baseCatalog.loadTable(tableIdentifier);
+        if (table instanceof BaseTable baseTable) {
+          return buildLoadTableResponseWithDelegationCredentials(
+                  tableIdentifier,
+                  baseTable.operations().current(),
+                  resolvedMode,
+                  Set.of(
+                      PolarisStorageActions.READ,
+                      PolarisStorageActions.WRITE,
+                      PolarisStorageActions.LIST),
+                  refreshCredentialsEndpoint)
+              .build();
+        }
+        throw notFoundExceptionForTableLikeEntity(
+            tableIdentifier, PolarisEntitySubType.ICEBERG_TABLE);
+      }
+    }
+
     if (baseCatalog.tableExists(tableIdentifier)) {
       throw alreadyExistsExceptionForTableLikeEntity(
           tableIdentifier, PolarisEntitySubType.ICEBERG_TABLE);
@@ -429,14 +472,45 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     properties.put("created-at", OffsetDateTime.now(ZoneOffset.UTC).toString());
     properties.putAll(reservedProperties().removeReservedProperties(request.properties()));
 
-    Table table =
-        baseCatalog
-            .buildTable(tableIdentifier, request.schema())
-            .withLocation(request.location())
-            .withPartitionSpec(request.spec())
-            .withSortOrder(request.writeOrder())
-            .withProperties(properties)
-            .create();
+    Table table;
+    try {
+      table =
+          baseCatalog
+              .buildTable(tableIdentifier, request.schema())
+              .withLocation(request.location())
+              .withPartitionSpec(request.spec())
+              .withSortOrder(request.writeOrder())
+              .withProperties(properties)
+              .create();
+    } catch (AlreadyExistsException e) {
+      // Concurrent same-key create: the race winner committed the key atomically with the table, so
+      // a single fresh lookup (no polling/backoff) is enough to replay instead of returning 409.
+      if (idempotencyRequestContext().isActive()) {
+        UUID idempotencyKey = requireNonNull(idempotencyRequestContext().pendingKey());
+        IcebergTableLikeEntity winner =
+            passthroughResolveTableEntityForIdempotency(tableIdentifier);
+        if (winner != null
+            && EntityIdempotency.hasLiveKey(
+                winner.getInternalPropertiesAsMap(), idempotencyKey, clock().instant())) {
+          Table existingTable = baseCatalog.loadTable(tableIdentifier);
+          if (existingTable instanceof BaseTable baseTable) {
+            return buildLoadTableResponseWithDelegationCredentials(
+                    tableIdentifier,
+                    baseTable.operations().current(),
+                    resolvedMode,
+                    Set.of(
+                        PolarisStorageActions.READ,
+                        PolarisStorageActions.WRITE,
+                        PolarisStorageActions.LIST),
+                    refreshCredentialsEndpoint)
+                .build();
+          }
+          throw notFoundExceptionForTableLikeEntity(
+              tableIdentifier, PolarisEntitySubType.ICEBERG_TABLE);
+        }
+      }
+      throw e;
+    }
 
     if (table instanceof BaseTable baseTable) {
       TableMetadata tableMetadata = baseTable.operations().current();
@@ -680,6 +754,30 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
       return IcebergTableLikeEntity.of(rawLeafEntity);
     }
     return null; // could be an external catalog
+  }
+
+  /**
+   * Resolve the table entity from persistence for idempotency replay, or {@code null} if it does
+   * not exist.
+   *
+   * <p>Uses {@link
+   * PolarisResolutionManifestCatalogView#getPassthroughResolvedPath(ResolvedPathKey)}, which runs a
+   * new {@code Resolver} and loads entities from the metastore (via {@code getOrLoadEntityByName} /
+   * {@code loadResolvedEntityByName}). This is not the authorization-time snapshot from {@link
+   * PolarisResolutionManifestCatalogView#getResolvedPath(ResolvedPathKey)}.
+   */
+  private @Nullable IcebergTableLikeEntity passthroughResolveTableEntityForIdempotency(
+      TableIdentifier tableIdentifier) {
+    PolarisResolvedPathWrapper target =
+        resolutionManifest.getPassthroughResolvedPath(ResolvedPathKey.ofTableLike(tableIdentifier));
+    if (target == null) {
+      return null;
+    }
+    PolarisEntity leaf = target.getRawLeafEntity();
+    if (leaf == null || leaf.getType() != PolarisEntityType.TABLE_LIKE) {
+      return null;
+    }
+    return IcebergTableLikeEntity.of(leaf);
   }
 
   public LoadTableResponse loadTable(TableIdentifier tableIdentifier, String snapshots) {
