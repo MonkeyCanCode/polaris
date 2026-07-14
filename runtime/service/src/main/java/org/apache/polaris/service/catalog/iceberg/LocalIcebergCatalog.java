@@ -35,6 +35,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -143,6 +144,8 @@ import org.apache.polaris.service.events.PolarisEvent;
 import org.apache.polaris.service.events.PolarisEventDispatcher;
 import org.apache.polaris.service.events.PolarisEventMetadataFactory;
 import org.apache.polaris.service.events.PolarisEventType;
+import org.apache.polaris.service.idempotency.EntityIdempotency;
+import org.apache.polaris.service.idempotency.IdempotencyRequestContext;
 import org.apache.polaris.service.task.TaskExecutor;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.apache.polaris.service.types.NotificationType;
@@ -197,6 +200,10 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
   private final FileIOFactory fileIOFactory;
   private PolarisMetaStoreManager metaStoreManager;
 
+  // Entity-property idempotency: when the request context carries a key, it is stamped into the new
+  // table entity's internal properties within the same transaction as the create.
+  private final IdempotencyRequestContext idempotencyRequestContext;
+
   private Consumer<MetadataFileCleanup> deleteRemovedMetadataFiles =
       LocalIcebergCatalog::defaultDeleteRemovedMetadataFiles;
 
@@ -223,6 +230,34 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
       FileIOFactory fileIOFactory,
       PolarisEventDispatcher polarisEventDispatcher,
       PolarisEventMetadataFactory eventMetadataFactory) {
+    this(
+        diagnostics,
+        resolverFactory,
+        metaStoreManager,
+        callContext,
+        resolvedEntityView,
+        principal,
+        taskExecutor,
+        storageAccessConfigProvider,
+        fileIOFactory,
+        polarisEventDispatcher,
+        eventMetadataFactory,
+        IdempotencyRequestContext.DISABLED);
+  }
+
+  public LocalIcebergCatalog(
+      PolarisDiagnostics diagnostics,
+      ResolverFactory resolverFactory,
+      PolarisMetaStoreManager metaStoreManager,
+      CallContext callContext,
+      PolarisResolutionManifestCatalogView resolvedEntityView,
+      PolarisPrincipal principal,
+      TaskExecutor taskExecutor,
+      StorageAccessConfigProvider storageAccessConfigProvider,
+      FileIOFactory fileIOFactory,
+      PolarisEventDispatcher polarisEventDispatcher,
+      PolarisEventMetadataFactory eventMetadataFactory,
+      IdempotencyRequestContext idempotencyRequestContext) {
     this.diagnostics = diagnostics;
     this.resolverFactory = resolverFactory;
     this.callContext = callContext;
@@ -238,6 +273,7 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
     this.metaStoreManager = metaStoreManager;
     this.polarisEventDispatcher = polarisEventDispatcher;
     this.eventMetadataFactory = eventMetadataFactory;
+    this.idempotencyRequestContext = idempotencyRequestContext;
   }
 
   @Override
@@ -1832,12 +1868,23 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
       String existingLocation;
       if (null == entity) {
         existingLocation = null;
+        Map<String, String> internalProperties = storedProperties;
+        if (idempotencyRequestContext.isActive()) {
+          // Embed the idempotency key into the new entity's internal properties so it is persisted
+          // in the same transaction as the table create (no separate idempotency-store write).
+          internalProperties =
+              EntityIdempotency.recordKey(
+                  storedProperties,
+                  idempotencyRequestContext.pendingKey(),
+                  idempotencyRequestContext.pendingExpiry(),
+                  Instant.now());
+        }
         entity =
             new IcebergTableLikeEntity.Builder(
                     PolarisEntitySubType.ICEBERG_TABLE,
                     tableIdentifier,
                     Map.of(),
-                    storedProperties,
+                    internalProperties,
                     newLocation)
                 .setCatalogId(getCatalogId())
                 .setBaseLocation(metadata.location())

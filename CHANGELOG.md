@@ -32,6 +32,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 ### Upgrade notes
 
 ### Breaking changes
+- Removed the `--schema-version` (`-v`) option from the admin tool's `bootstrap` command. New realms
+  are now always bootstrapped with the latest available schema version.
+- The `MaintenanceService.performMaintenance()` signature now requires an explicit `OptionalLong overrideRunId` argument to supersede the latest unfinished maintenance run.
 - Admin grant APIs now reject table-like privilege targets with an empty namespace. A table-like target without a namespace is considered invalid input.
 
 ### New Features
@@ -41,6 +44,7 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - Added support for publishing histogram buckets for HTTP server request duration as configured SLO boundaries.
 - Added an OpenTelemetry event listener for emitting Polaris audit events as OpenTelemetry log records.
 - Added optional `sessionPolicy` field to `SigV4AuthenticationParameters` for catalog federation. When set, the IAM session policy JSON is attached to the STS AssumeRole request, allowing administrators to restrict vended credentials to only the required AWS services and actions (Principle of Least Privilege).
+- Added opt-in idempotency for `createTable` in the Iceberg REST catalog. When enabled via `polaris.idempotency.enabled=true` (default `false`), a client-supplied `Idempotency-Key` header is embedded into the new table entity and committed in the same transaction; a retry carrying the same key within the TTL window (`polaris.idempotency.ttl`, default `PT5M`) replays the original success instead of failing with `AlreadyExists`.
 
 ### Changes
 - The admin tool's `bootstrap` command is now idempotent: bootstrapping a realm that is already
@@ -92,6 +96,7 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The `nosql maintenance-run` admin command now rejects a new run when the latest recorded maintenance run is still unfinished, unless the operator explicitly passes `--supersede-run=<run-id>`.
 - Added version option to Polaris CLI.
 - The token broker now builds the JWT `Algorithm` and `JWTVerifier` once per realm in the `TokenBrokerFactory` and reuses them across requests, instead of rebuilding them on every `verify()`/`sign()` call on the request-scoped broker. For deployments using file-based symmetric secrets, the secret is now read once per realm (at first use) rather than on every JWT operation; rotating the on-disk secret requires a restart.
+- Authorization failure messages (HTTP 403 / `ForbiddenException` from `PolarisAuthorizerImpl`) now log the specific missing privilege(s) and the entity each was checked against server-side (at `INFO` level), e.g. `missing TABLE_CREATE on NAMESPACE 'ns1'`. The client-facing 403 response remains a generic message to avoid leaking authorization metadata to untrusted clients. Operators can correlate client errors to server logs using the existing `X-Request-ID` header (present in default log MDC as `requestId`).
 
 ### Fixes
 
