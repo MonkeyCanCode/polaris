@@ -515,9 +515,14 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
 
   @Override
   protected String defaultWarehouseLocation(TableIdentifier tableIdentifier) {
+    String prefixedLocation = applyDefaultLocationObjectStoragePrefix(tableIdentifier, null);
+    if (prefixedLocation != null) {
+      return prefixedLocation;
+    }
+
+    String namespaceLocation;
     if (tableIdentifier.namespace().isEmpty()) {
-      return SLASH.join(
-          defaultNamespaceLocation(tableIdentifier.namespace()), tableIdentifier.name());
+      namespaceLocation = defaultBaseLocation;
     } else {
       PolarisResolvedPathWrapper resolvedNamespace =
           resolvedEntityView.getResolvedPath(
@@ -526,17 +531,17 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
         throw noSuchNamespaceException(tableIdentifier.namespace());
       }
       List<PolarisEntity> namespacePath = resolvedNamespace.getRawFullPath();
-      String namespaceLocation = resolveLocationForPath(diagnostics, namespacePath);
-      return SLASH.join(namespaceLocation, tableIdentifier.name());
+      namespaceLocation = resolveLocationForPath(diagnostics, namespacePath);
     }
+    return SLASH.join(namespaceLocation, defaultTableLikeName(tableIdentifier));
   }
 
-  private String defaultNamespaceLocation(Namespace namespace) {
-    if (namespace.isEmpty()) {
-      return defaultBaseLocation;
-    } else {
-      return SLASH.join(defaultBaseLocation, SLASH.join(namespace.levels()));
+  private String defaultTableLikeName(TableIdentifier tableIdentifier) {
+    if (realmConfig.getConfig(
+        FeatureConfiguration.DEFAULT_UNIQUE_TABLE_LOCATION_ENABLED, catalogEntity)) {
+      return LocationUtil.tableLocation(tableIdentifier, true);
     }
+    return tableIdentifier.name();
   }
 
   @Override
@@ -1190,7 +1195,7 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
     }
     locationBuilder
         .append("/")
-        .append(URLEncoder.encode(tableIdentifier.name(), Charset.defaultCharset()))
+        .append(URLEncoder.encode(defaultTableLikeName(tableIdentifier), Charset.defaultCharset()))
         .append("/");
     return locationBuilder.toString();
   }
