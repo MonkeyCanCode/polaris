@@ -1230,8 +1230,8 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
               FeatureConfiguration.DEFAULT_LOCATION_OBJECT_STORAGE_PREFIX_ENABLED.key(),
               FeatureConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.key()));
     } else if (!allowTableLocationOverlap) {
-      // TODO consider doing this check any time ALLOW_EXTERNAL_TABLE_LOCATION is enabled, not just
-      // here
+      // TODO consider doing this check any time ALLOW_UNSTRUCTURED_TABLE_LOCATION is enabled, not
+      // just here
       if (!optimizedSiblingCheck) {
         throw new IllegalStateException(
             String.format(
@@ -2537,11 +2537,7 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
 
   private void validateMetadataFileInTableDir(
       TableIdentifier identifier, String tableLocation, String metadataLocation) {
-    boolean allowEscape =
-        realmConfig.getConfig(FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION, catalogEntity);
-    if (!allowEscape
-        && !realmConfig.getConfig(
-            FeatureConfiguration.ALLOW_EXTERNAL_METADATA_FILE_LOCATION, catalogEntity)) {
+    if (!allowExternalMetadataFileLocation()) {
       LOGGER.debug(
           "Validating base location {} for table {} in metadata file {}",
           tableLocation,
@@ -2555,6 +2551,18 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
             metadataLocation, tableLocation);
       }
     }
+  }
+
+  @SuppressWarnings({"deprecation", "removal"})
+  private boolean allowExternalMetadataFileLocation() {
+    // ALLOW_EXTERNAL_TABLE_LOCATION is deprecated, but remains honored as a compatibility alias for
+    // existing catalogs during the migration to ALLOW_EXTERNAL_METADATA_FILE_LOCATION.
+    CatalogEntity resolvedCatalogEntity =
+        Optional.ofNullable(resolvedEntityView.getResolvedCatalogEntity()).orElse(catalogEntity);
+    return realmConfig.getConfig(
+            FeatureConfiguration.ALLOW_EXTERNAL_METADATA_FILE_LOCATION, resolvedCatalogEntity)
+        || realmConfig.getConfig(
+            FeatureConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION, resolvedCatalogEntity);
   }
 
   private FileIO loadFileIOForTableLike(
