@@ -47,7 +47,7 @@ def _prompt_scheme(default: str) -> str:
             return scheme
         else:
             print(
-                f"Invalid scheme '{scheme}'. Excepeted one of {list(ALLOWED_SCHEMES)}."
+                f"Invalid scheme '{scheme}'. Supported one of {list(ALLOWED_SCHEMES)}."
             )
 
 
